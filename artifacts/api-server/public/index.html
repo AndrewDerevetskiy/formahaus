@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Furniture Store</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      overflow: hidden;
+    }
+
+    #canvas-container {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+
+    #ui {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    header {
+      width: 100%;
+      background: rgba(10, 10, 30, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      pointer-events: auto;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .logo {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #e8c97e;
+    }
+
+    .logo span {
+      color: #fff;
+      font-weight: 300;
+    }
+
+    .tagline {
+      font-size: 0.85rem;
+      color: #aaa;
+      letter-spacing: 1px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 14px;
+    }
+
+    .btn {
+      padding: 12px 28px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-sofa {
+      background: linear-gradient(135deg, #e8c97e, #c9a84c);
+      color: #1a1a2e;
+    }
+
+    .btn-sofa:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(232, 201, 126, 0.4);
+    }
+
+    .btn-sofa:active { transform: translateY(0); }
+
+    .btn-chair {
+      background: linear-gradient(135deg, #7eb8e8, #4c8fc9);
+      color: #1a1a2e;
+    }
+
+    .btn-chair:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(126, 184, 232, 0.4);
+    }
+
+    .btn-chair:active { transform: translateY(0); }
+
+    #info-panel {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 10, 30, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 12px 24px;
+      font-size: 0.8rem;
+      color: #aaa;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    #count-display {
+      position: fixed;
+      top: 90px;
+      right: 24px;
+      background: rgba(10, 10, 30, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 14px 20px;
+      font-size: 0.85rem;
+      color: #ccc;
+      pointer-events: none;
+    }
+
+    #count-display div { margin: 4px 0; }
+    .count-sofa { color: #e8c97e; font-weight: 600; }
+    .count-chair { color: #7eb8e8; font-weight: 600; }
+
+    .btn-clear {
+      background: rgba(255,80,80,0.15);
+      border: 1px solid rgba(255,80,80,0.3);
+      color: #ff8080;
+      font-size: 0.8rem;
+      padding: 8px 18px;
+    }
+
+    .btn-clear:hover {
+      background: rgba(255,80,80,0.25);
+      transform: translateY(-1px);
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="ui">
+    <header>
+      <div class="logo">FORMA<span>HAUS</span></div>
+      <div class="tagline">Explore Our 3D Collection</div>
+      <div class="controls">
+        <button class="btn btn-sofa" id="addSofa">+ Add Sofa</button>
+        <button class="btn btn-chair" id="addChair">+ Add Chair</button>
+        <button class="btn btn-clear" id="clearAll">Clear All</button>
+      </div>
+    </header>
+  </div>
+
+  <div id="count-display">
+    <div>Sofas: <span class="count-sofa" id="sofaCount">0</span></div>
+    <div>Chairs: <span class="count-chair" id="chairCount">0</span></div>
+  </div>
+
+  <div id="info-panel">
+    Drag to rotate &nbsp;|&nbsp; Scroll to zoom &nbsp;|&nbsp; Click buttons to add furniture
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    const container = document.getElementById('canvas-container');
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setClearColor(0x1a1a2e);
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x1a1a2e, 20, 60);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(6, 5, 10);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 4;
+    controls.maxDistance = 25;
+    controls.maxPolarAngle = Math.PI / 2 - 0.05;
+    controls.target.set(0, 0, 0);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfff4e0, 1.2);
+    dirLight.position.set(8, 12, 8);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 50;
+    dirLight.shadow.camera.left = -15;
+    dirLight.shadow.camera.right = 15;
+    dirLight.shadow.camera.top = 15;
+    dirLight.shadow.camera.bottom = -15;
+    scene.add(dirLight);
+
+    const fillLight = new THREE.PointLight(0x4060ff, 0.5, 30);
+    fillLight.position.set(-8, 6, -4);
+    scene.add(fillLight);
+
+    const gridHelper = new THREE.GridHelper(24, 24, 0x333366, 0x222244);
+    scene.add(gridHelper);
+
+    const floorGeo = new THREE.PlaneGeometry(24, 24);
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0x16162a,
+      roughness: 0.8,
+      metalness: 0.1,
+    });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const furnitureItems = [];
+    let sofaCount = 0;
+    let chairCount = 0;
+
+    function getNextPosition() {
+      const total = furnitureItems.length;
+      const cols = Math.ceil(Math.sqrt(total + 1));
+      const row = Math.floor(total / cols);
+      const col = total % cols;
+      const spacing = 3;
+      const offset = (cols - 1) * spacing * 0.5;
+      return new THREE.Vector3(
+        col * spacing - offset + (Math.random() - 0.5) * 0.5,
+        0,
+        row * spacing - 3 + (Math.random() - 0.5) * 0.5
+      );
+    }
+
+    function buildSofa(pos) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: 0xe8c97e, roughness: 0.7 });
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x3a2d1a, roughness: 0.9 });
+
+      const baseGeo = new THREE.BoxGeometry(2.2, 0.35, 1);
+      const base = new THREE.Mesh(baseGeo, mat);
+      base.position.y = 0.175;
+      base.castShadow = true;
+      base.receiveShadow = true;
+      group.add(base);
+
+      const cushionGeo = new THREE.BoxGeometry(2.1, 0.3, 0.85);
+      const cushion = new THREE.Mesh(cushionGeo, new THREE.MeshStandardMaterial({ color: 0xd4af55, roughness: 0.6 }));
+      cushion.position.y = 0.5;
+      cushion.castShadow = true;
+      group.add(cushion);
+
+      const backGeo = new THREE.BoxGeometry(2.2, 0.75, 0.25);
+      const back = new THREE.Mesh(backGeo, mat);
+      back.position.set(0, 0.725, -0.375);
+      back.castShadow = true;
+      group.add(back);
+
+      const armGeo = new THREE.BoxGeometry(0.25, 0.55, 1);
+      [-1.1, 1.1].forEach(x => {
+        const arm = new THREE.Mesh(armGeo, mat);
+        arm.position.set(x, 0.45, 0);
+        arm.castShadow = true;
+        group.add(arm);
+      });
+
+      const legGeo = new THREE.BoxGeometry(0.12, 0.18, 0.12);
+      [[-0.95, -0.35], [0.95, -0.35], [-0.95, 0.35], [0.95, 0.35]].forEach(([x, z]) => {
+        const leg = new THREE.Mesh(legGeo, darkMat);
+        leg.position.set(x, 0.09, z);
+        leg.castShadow = true;
+        group.add(leg);
+      });
+
+      group.position.copy(pos);
+      group.position.y = 0;
+      group.rotation.y = Math.random() * Math.PI * 2;
+      scene.add(group);
+      furnitureItems.push(group);
+
+      animateIn(group);
+    }
+
+    function buildChair(pos) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: 0x7eb8e8, roughness: 0.6 });
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x1a2a3a, roughness: 0.9 });
+
+      const seatGeo = new THREE.BoxGeometry(0.85, 0.1, 0.85);
+      const seat = new THREE.Mesh(seatGeo, mat);
+      seat.position.y = 0.45;
+      seat.castShadow = true;
+      seat.receiveShadow = true;
+      group.add(seat);
+
+      const cushionGeo = new THREE.BoxGeometry(0.78, 0.1, 0.78);
+      const cushion = new THREE.Mesh(cushionGeo, new THREE.MeshStandardMaterial({ color: 0x5a9fd4, roughness: 0.5 }));
+      cushion.position.y = 0.55;
+      cushion.castShadow = true;
+      group.add(cushion);
+
+      const backGeo = new THREE.BoxGeometry(0.85, 0.65, 0.1);
+      const back = new THREE.Mesh(backGeo, mat);
+      back.position.set(0, 0.825, -0.38);
+      back.castShadow = true;
+      group.add(back);
+
+      const legGeo = new THREE.BoxGeometry(0.08, 0.45, 0.08);
+      [[-0.35, -0.35], [0.35, -0.35], [-0.35, 0.35], [0.35, 0.35]].forEach(([x, z]) => {
+        const leg = new THREE.Mesh(legGeo, darkMat);
+        leg.position.set(x, 0.225, z);
+        leg.castShadow = true;
+        group.add(leg);
+      });
+
+      group.position.copy(pos);
+      group.position.y = 0;
+      group.rotation.y = Math.random() * Math.PI * 2;
+      scene.add(group);
+      furnitureItems.push(group);
+
+      animateIn(group);
+    }
+
+    function animateIn(group) {
+      group.scale.set(0.01, 0.01, 0.01);
+      const target = { s: 0.01 };
+      let start = null;
+      const duration = 400;
+
+      function step(ts) {
+        if (!start) start = ts;
+        const t = Math.min((ts - start) / duration, 1);
+        const ease = 1 - Math.pow(1 - t, 3);
+        const s = 0.01 + ease * 0.99;
+        group.scale.set(s, s, s);
+        if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    function updateCounts() {
+      document.getElementById('sofaCount').textContent = sofaCount;
+      document.getElementById('chairCount').textContent = chairCount;
+    }
+
+    document.getElementById('addSofa').addEventListener('click', () => {
+      sofaCount++;
+      buildSofa(getNextPosition());
+      updateCounts();
+    });
+
+    document.getElementById('addChair').addEventListener('click', () => {
+      chairCount++;
+      buildChair(getNextPosition());
+      updateCounts();
+    });
+
+    document.getElementById('clearAll').addEventListener('click', () => {
+      furnitureItems.forEach(item => scene.remove(item));
+      furnitureItems.length = 0;
+      sofaCount = 0;
+      chairCount = 0;
+      updateCounts();
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
