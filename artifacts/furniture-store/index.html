@@ -7,26 +7,78 @@
   <style>
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
     :root {
-      --pw:220px; --hh:56px;
+      --pw:230px; --hh:54px;
       --bg:#f0ece6; --pb:#fff; --ac:#8b6f47; --acl:#c9a97e;
       --tx:#2c2c2c; --muted:#888; --brd:#e0d8ce; --hv:#f5f0e8;
     }
     html,body { width:100%; height:100%; font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--tx); overflow:hidden; }
 
+    /* ── Header ── */
     #hdr {
       position:fixed; top:0; left:0; right:0; height:var(--hh);
       background:var(--pb); border-bottom:1px solid var(--brd);
-      display:flex; align-items:center; justify-content:space-between;
-      padding:0 20px; z-index:100; gap:12px;
+      display:flex; align-items:center; padding:0 16px; z-index:200; gap:8px;
     }
-    .logo { font-size:1.2rem; font-weight:700; letter-spacing:3px; white-space:nowrap; }
+    .logo { font-size:1.1rem; font-weight:700; letter-spacing:3px; white-space:nowrap; margin-right:4px; }
     .logo em { color:var(--ac); font-style:normal; }
-    .hint { font-size:0.73rem; color:var(--muted); flex:1; text-align:center; }
-    .hbtn { padding:7px 16px; border-radius:6px; border:1px solid var(--brd); font-size:0.78rem; font-weight:600; cursor:pointer; background:var(--pb); color:var(--tx); transition:background .15s; white-space:nowrap; }
+    .hint { font-size:0.7rem; color:var(--muted); flex:1; text-align:center; padding:0 8px; }
+    .hbtn {
+      padding:6px 13px; border-radius:6px; border:1px solid var(--brd);
+      font-size:0.76rem; font-weight:600; cursor:pointer; background:var(--pb);
+      color:var(--tx); transition:background .15s; white-space:nowrap; display:flex; align-items:center; gap:5px;
+    }
     .hbtn:hover { background:var(--hv); }
     .hbtn.p { background:var(--ac); color:#fff; border-color:var(--ac); }
     .hbtn.p:hover { background:#7a5e38; }
+    .hbtn.active-menu { background:var(--hv); border-color:var(--ac); color:var(--ac); }
 
+    /* ── Price chip ── */
+    #price-chip {
+      display:flex; align-items:center; gap:6px; padding:5px 13px;
+      background:#f5ede0; border:1px solid var(--acl); border-radius:20px;
+      white-space:nowrap;
+    }
+    #price-chip .pc-lbl { font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+    #price-chip .pc-val { font-size:0.9rem; font-weight:700; color:var(--ac); }
+
+    /* ── Floating dropdowns ── */
+    .dropdown {
+      position:fixed; top:calc(var(--hh) + 6px);
+      background:var(--pb); border:1px solid var(--brd); border-radius:10px;
+      box-shadow:0 6px 24px rgba(0,0,0,.1); z-index:300; display:none; min-width:210px;
+      padding:12px;
+    }
+    .dropdown.open { display:block; }
+    .dd-title { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--muted); margin-bottom:10px; }
+    .dd-row { display:flex; gap:6px; flex-wrap:wrap; }
+
+    /* Finishing options */
+    .fin-opt {
+      display:flex; align-items:center; gap:8px; padding:8px 10px;
+      border-radius:7px; border:1.5px solid var(--brd); cursor:pointer;
+      transition:all .15s; font-size:0.78rem; font-weight:600; width:100%; margin-bottom:4px;
+    }
+    .fin-opt:hover { border-color:var(--acl); background:var(--hv); }
+    .fin-opt.sel { border-color:var(--ac); background:#f5ede0; color:var(--ac); }
+    .fin-swatch { width:30px; height:22px; border-radius:4px; border:1px solid rgba(0,0,0,.1); flex-shrink:0; }
+
+    /* Wall color swatches */
+    .wall-swatch {
+      width:36px; height:36px; border-radius:6px; border:2.5px solid transparent;
+      cursor:pointer; transition:border-color .15s; position:relative;
+    }
+    .wall-swatch.sel { border-color:var(--ac); }
+    .wall-swatch-grid { display:grid; grid-template-columns:repeat(5,36px); gap:6px; margin-bottom:12px; }
+    .wp-opt {
+      display:flex; align-items:center; gap:8px; padding:7px 10px;
+      border-radius:7px; border:1.5px solid var(--brd); cursor:pointer;
+      transition:all .15s; font-size:0.76rem; font-weight:600; width:100%; margin-bottom:4px;
+    }
+    .wp-opt:hover { border-color:var(--acl); background:var(--hv); }
+    .wp-opt.sel { border-color:var(--ac); background:#f5ede0; color:var(--ac); }
+    .wp-preview { width:36px; height:28px; border-radius:4px; border:1px solid rgba(0,0,0,.08); flex-shrink:0; overflow:hidden; }
+
+    /* ── Sidebar ── */
     #sb {
       position:fixed; top:var(--hh); left:0; bottom:0; width:var(--pw);
       background:var(--pb); border-right:1px solid var(--brd);
@@ -34,9 +86,9 @@
     }
     #sb::-webkit-scrollbar { width:4px; }
     #sb::-webkit-scrollbar-thumb { background:var(--brd); border-radius:4px; }
-    .ch { padding:14px 16px 6px; font-size:0.65rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
+    .ch { padding:14px 16px 6px; font-size:0.63rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); }
     .cl {
-      display:flex; align-items:center; gap:10px; padding:10px 16px;
+      display:flex; align-items:center; gap:9px; padding:9px 16px;
       font-size:0.8rem; font-weight:600; cursor:pointer; user-select:none;
       transition:background .15s; border-left:3px solid transparent;
     }
@@ -47,25 +99,49 @@
     .ci { display:none; flex-direction:column; gap:2px; padding:0 8px 8px; }
     .ci.open { display:flex; }
     .fi {
-      display:flex; align-items:center; gap:10px; padding:9px 10px;
+      display:flex; align-items:center; gap:9px; padding:8px 10px;
       border-radius:8px; cursor:pointer; user-select:none;
       transition:all .15s; border:1px solid transparent;
     }
     .fi:hover { background:var(--hv); border-color:var(--brd); }
-    .ft { width:40px; height:40px; border-radius:6px; background:var(--hv); border:1px solid var(--brd); display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
-    .fn { font-size:0.8rem; font-weight:600; }
-    .fd { font-size:0.68rem; color:var(--muted); margin-top:1px; }
+    .ft { width:38px; height:38px; border-radius:6px; background:var(--hv); border:1px solid var(--brd); display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; }
+    .fi-info { flex:1; min-width:0; }
+    .fn { font-size:0.78rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .fd { font-size:0.65rem; color:var(--muted); margin-top:1px; }
+    .fp { font-size:0.72rem; font-weight:700; color:var(--ac); margin-top:2px; }
 
+    /* ── Viewport ── */
     #vp { position:fixed; top:var(--hh); left:var(--pw); right:0; bottom:0; }
     #vp canvas { display:block; width:100%; height:100%; }
 
-    #sb2 { position:fixed; bottom:16px; left:calc(var(--pw) + 16px); background:rgba(255,255,255,.9); backdrop-filter:blur(8px); border:1px solid var(--brd); border-radius:20px; padding:6px 16px; font-size:0.72rem; color:var(--muted); pointer-events:none; z-index:60; }
-    #sp { position:fixed; bottom:16px; right:24px; background:rgba(255,255,255,.95); backdrop-filter:blur(8px); border:1px solid var(--brd); border-radius:10px; padding:14px 16px; font-size:0.78rem; z-index:60; display:none; min-width:165px; }
-    #sp h4 { font-size:0.82rem; color:var(--ac); margin-bottom:6px; }
-    #spos { font-size:0.72rem; color:var(--muted); }
-    #dbtn { margin-top:10px; width:100%; padding:6px 0; background:#fee2e2; border:1px solid #fca5a5; color:#dc2626; border-radius:6px; font-size:0.72rem; font-weight:600; cursor:pointer; }
+    /* ── Status bar ── */
+    #sb2 {
+      position:fixed; bottom:14px; left:calc(var(--pw) + 14px);
+      background:rgba(255,255,255,.85); backdrop-filter:blur(8px);
+      border:1px solid var(--brd); border-radius:20px;
+      padding:5px 14px; font-size:0.7rem; color:var(--muted);
+      pointer-events:none; z-index:60;
+    }
+
+    /* ── Selected panel ── */
+    #sp {
+      position:fixed; bottom:14px; right:20px;
+      background:rgba(255,255,255,.95); backdrop-filter:blur(8px);
+      border:1px solid var(--brd); border-radius:10px;
+      padding:13px 15px; font-size:0.78rem; z-index:60;
+      display:none; min-width:170px;
+    }
+    #sp h4 { font-size:0.8rem; color:var(--ac); margin-bottom:4px; }
+    #spos { font-size:0.68rem; color:var(--muted); }
+    #sprice { font-size:0.82rem; font-weight:700; color:var(--tx); margin-top:4px; }
+    #dbtn {
+      margin-top:9px; width:100%; padding:6px 0;
+      background:#fee2e2; border:1px solid #fca5a5; color:#dc2626;
+      border-radius:6px; font-size:0.72rem; font-weight:600; cursor:pointer;
+    }
     #dbtn:hover { background:#fecaca; }
 
+    /* ── Loader ── */
     #loader { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:9999; transition:opacity .5s; }
     #loader.hidden { opacity:0; pointer-events:none; }
     .ll { font-size:2rem; font-weight:700; letter-spacing:4px; margin-bottom:24px; }
@@ -83,51 +159,108 @@
   <div class="lt" id="lt">Initialising…</div>
 </div>
 
+<!-- ── Header ── -->
 <header id="hdr">
   <div class="logo">FORMA<em>HAUS</em></div>
-  <div class="hint">Click item in panel to add · Click object to select · Drag to move · Delete key to remove</div>
+  <div class="hint">Click item to add · Click object to select · Drag to move</div>
+
+  <button class="hbtn" id="finBtn">🪵 Flooring ▾</button>
+  <button class="hbtn" id="wallBtn">🎨 Walls ▾</button>
+
+  <div id="price-chip">
+    <span class="pc-lbl">Total</span>
+    <span class="pc-val" id="totalPrice">$0</span>
+  </div>
+
   <button class="hbtn p" id="clearBtn">Clear Room</button>
 </header>
 
+<!-- ── Finishing dropdown ── -->
+<div class="dropdown" id="finDD">
+  <div class="dd-title">Floor Finishing</div>
+  <div class="fin-opt sel" data-floor="parquet">
+    <div class="fin-swatch" style="background:linear-gradient(135deg,#b8924c 50%,#d4aa72 50%)"></div> Wood Parquet
+  </div>
+  <div class="fin-opt" data-floor="laminate">
+    <div class="fin-swatch" style="background:linear-gradient(90deg,#3d2f20 33%,#4e3a28 33%,#4e3a28 66%,#3d2f20 66%)"></div> Dark Laminate
+  </div>
+  <div class="fin-opt" data-floor="linoleum">
+    <div class="fin-swatch" style="background:#9aa0a6"></div> Gray Linoleum
+  </div>
+</div>
+
+<!-- ── Wall dropdown ── -->
+<div class="dropdown" id="wallDD">
+  <div class="dd-title">Wall Color</div>
+  <div class="wall-swatch-grid" id="wallSwatches">
+    <div class="wall-swatch sel" data-wall="color" data-color="0xeceae4" style="background:#eceae4" title="Classic White"></div>
+    <div class="wall-swatch" data-wall="color" data-color="0xc4d5c0" style="background:#c4d5c0" title="Sage Green"></div>
+    <div class="wall-swatch" data-wall="color" data-color="0xc4b0a0" style="background:#c4b0a0" title="Dusty Rose"></div>
+    <div class="wall-swatch" data-wall="color" data-color="0x3d4f6a" style="background:#3d4f6a" title="Navy"></div>
+    <div class="wall-swatch" data-wall="color" data-color="0xe8dfd0" style="background:#e8dfd0" title="Warm Sand"></div>
+  </div>
+  <div class="dd-title" style="margin-top:4px">Wallpaper</div>
+  <div class="wp-opt" data-wall="stripes">
+    <canvas class="wp-preview" id="wpPrev1" width="36" height="28"></canvas> Vertical Stripes
+  </div>
+  <div class="wp-opt" data-wall="herringbone">
+    <canvas class="wp-preview" id="wpPrev2" width="36" height="28"></canvas> Herringbone
+  </div>
+</div>
+
+<!-- ── Sidebar ── -->
 <nav id="sb">
   <div class="ch">Furniture Library</div>
 
   <div class="cl active open" data-cat="seating"><span>🛋️</span> Seating <span class="cch">›</span></div>
   <div class="ci open" id="cat-seating">
-    <div class="fi" data-type="sofa" data-label="2-Seat Sofa"><div class="ft">🛋️</div><div><div class="fn">2-Seat Sofa</div><div class="fd">220×100 cm</div></div></div>
-    <div class="fi" data-type="armchair" data-label="Armchair"><div class="ft">💺</div><div><div class="fn">Armchair</div><div class="fd">90×90 cm</div></div></div>
-    <div class="fi" data-type="bench" data-label="Bench"><div class="ft">🪑</div><div><div class="fn">Bench</div><div class="fd">140×45 cm</div></div></div>
+    <div class="fi" data-type="sofa"       data-label="2-Seat Sofa"    data-price="1299"><div class="ft">🛋️</div><div class="fi-info"><div class="fn">2-Seat Sofa</div><div class="fd">220×100 cm</div><div class="fp">$1,299</div></div></div>
+    <div class="fi" data-type="armchair"   data-label="Armchair"       data-price="649"><div class="ft">💺</div><div class="fi-info"><div class="fn">Armchair</div><div class="fd">90×90 cm</div><div class="fp">$649</div></div></div>
+    <div class="fi" data-type="bench"      data-label="Bench"          data-price="349"><div class="ft">🪑</div><div class="fi-info"><div class="fn">Bench</div><div class="fd">140×45 cm</div><div class="fp">$349</div></div></div>
   </div>
 
   <div class="cl" data-cat="tables"><span>🪵</span> Tables <span class="cch">›</span></div>
   <div class="ci" id="cat-tables">
-    <div class="fi" data-type="coffeetable" data-label="Coffee Table"><div class="ft">🪵</div><div><div class="fn">Coffee Table</div><div class="fd">120×60 cm</div></div></div>
-    <div class="fi" data-type="diningtable" data-label="Dining Table"><div class="ft">🍽️</div><div><div class="fn">Dining Table</div><div class="fd">180×90 cm</div></div></div>
-    <div class="fi" data-type="sidetable" data-label="Side Table"><div class="ft">⬜</div><div><div class="fn">Side Table</div><div class="fd">50×50 cm</div></div></div>
+    <div class="fi" data-type="coffeetable"  data-label="Coffee Table"  data-price="449"><div class="ft">🪵</div><div class="fi-info"><div class="fn">Coffee Table</div><div class="fd">120×60 cm</div><div class="fp">$449</div></div></div>
+    <div class="fi" data-type="diningtable"  data-label="Dining Table"  data-price="899"><div class="ft">🍽️</div><div class="fi-info"><div class="fn">Dining Table</div><div class="fd">180×90 cm</div><div class="fp">$899</div></div></div>
+    <div class="fi" data-type="sidetable"    data-label="Side Table"    data-price="199"><div class="ft">⬜</div><div class="fi-info"><div class="fn">Side Table</div><div class="fd">50×50 cm</div><div class="fp">$199</div></div></div>
   </div>
 
   <div class="cl" data-cat="storage"><span>🗄️</span> Storage <span class="cch">›</span></div>
   <div class="ci" id="cat-storage">
-    <div class="fi" data-type="bookshelf" data-label="Bookshelf"><div class="ft">📚</div><div><div class="fn">Bookshelf</div><div class="fd">100×35 cm</div></div></div>
-    <div class="fi" data-type="cabinet" data-label="Cabinet"><div class="ft">🗄️</div><div><div class="fn">Cabinet</div><div class="fd">80×45 cm</div></div></div>
+    <div class="fi" data-type="bookshelf" data-label="Bookshelf"  data-price="549"><div class="ft">📚</div><div class="fi-info"><div class="fn">Bookshelf</div><div class="fd">100×35 cm</div><div class="fp">$549</div></div></div>
+    <div class="fi" data-type="cabinet"   data-label="Cabinet"    data-price="699"><div class="ft">🗄️</div><div class="fi-info"><div class="fn">Cabinet</div><div class="fd">80×45 cm</div><div class="fp">$699</div></div></div>
   </div>
 
   <div class="cl" data-cat="lighting"><span>💡</span> Lighting <span class="cch">›</span></div>
   <div class="ci" id="cat-lighting">
-    <div class="fi" data-type="floorlamp" data-label="Floor Lamp"><div class="ft">💡</div><div><div class="fn">Floor Lamp</div><div class="fd">35×35 cm</div></div></div>
-    <div class="fi" data-type="pendant" data-label="Pendant Light"><div class="ft">🔆</div><div><div class="fn">Pendant Light</div><div class="fd">30×30 cm</div></div></div>
+    <div class="fi" data-type="floorlamp" data-label="Floor Lamp"     data-price="289"><div class="ft">💡</div><div class="fi-info"><div class="fn">Floor Lamp</div><div class="fd">35×35 cm</div><div class="fp">$289</div></div></div>
+    <div class="fi" data-type="pendant"   data-label="Pendant Light"  data-price="179"><div class="ft">🔆</div><div class="fi-info"><div class="fn">Pendant Light</div><div class="fd">30×30 cm</div><div class="fp">$179</div></div></div>
+  </div>
+
+  <div class="cl" data-cat="rugs"><span>🟫</span> Rugs <span class="cch">›</span></div>
+  <div class="ci" id="cat-rugs">
+    <div class="fi" data-type="rugRect"     data-label="Classic Rug"    data-price="249"><div class="ft">🟫</div><div class="fi-info"><div class="fn">Classic Rug</div><div class="fd">200×140 cm · Terracotta</div><div class="fp">$249</div></div></div>
+    <div class="fi" data-type="rugRound"    data-label="Round Rug"      data-price="299"><div class="ft">⭕</div><div class="fi-info"><div class="fn">Round Rug</div><div class="fd">Ø 160 cm · Navy</div><div class="fp">$299</div></div></div>
+    <div class="fi" data-type="rugRunner"   data-label="Runner Rug"     data-price="189"><div class="ft">▬</div><div class="fi-info"><div class="fn">Runner Rug</div><div class="fd">240×70 cm · Sage</div><div class="fp">$189</div></div></div>
+    <div class="fi" data-type="rugTufted"   data-label="Tufted Rug"     data-price="379"><div class="ft">🔷</div><div class="fi-info"><div class="fn">Tufted Rug</div><div class="fd">180×120 cm · Geometric</div><div class="fp">$379</div></div></div>
+    <div class="fi" data-type="rugOval"     data-label="Oval Rug"       data-price="279"><div class="ft">🟤</div><div class="fi-info"><div class="fn">Oval Rug</div><div class="fd">180×120 cm · Ivory</div><div class="fp">$279</div></div></div>
   </div>
 
   <div class="cl" data-cat="decor"><span>🪴</span> Decor <span class="cch">›</span></div>
   <div class="ci" id="cat-decor">
-    <div class="fi" data-type="plant" data-label="Plant"><div class="ft">🪴</div><div><div class="fn">Plant</div><div class="fd">40×40 cm</div></div></div>
-    <div class="fi" data-type="rug" data-label="Area Rug"><div class="ft">🟫</div><div><div class="fn">Area Rug</div><div class="fd">200×140 cm</div></div></div>
+    <div class="fi" data-type="plant" data-label="Plant" data-price="89"><div class="ft">🪴</div><div class="fi-info"><div class="fn">Plant</div><div class="fd">40×40 cm</div><div class="fp">$89</div></div></div>
   </div>
 </nav>
 
 <div id="vp"></div>
-<div id="sb2">Orbit: Left-drag · Zoom: Scroll · Select: Click object · Move: Drag object</div>
-<div id="sp"><h4 id="sname">Selected</h4><div id="spos"></div><button id="dbtn">🗑 Remove</button></div>
+<div id="sb2">Orbit: Left-drag · Zoom: Scroll · Select: Click object · Move: Drag object · Delete key to remove</div>
+<div id="sp">
+  <h4 id="sname">Selected</h4>
+  <div id="spos"></div>
+  <div id="sprice"></div>
+  <button id="dbtn">🗑 Remove</button>
+</div>
 
 <script type="module">
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
@@ -136,7 +269,26 @@ import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/cont
 const $=id=>document.getElementById(id);
 const prog=(p,t)=>{ $('lf').style.width=p+'%'; $('lt').textContent=t; };
 
-/* ── Renderer ─────────────────────────────── */
+/* ─────────────────────────────────────────────
+   PRICES
+───────────────────────────────────────────── */
+const PRICES={
+  sofa:1299,armchair:649,bench:349,
+  coffeetable:449,diningtable:899,sidetable:199,
+  bookshelf:549,cabinet:699,
+  floorlamp:289,pendant:179,
+  plant:89,
+  rugRect:249,rugRound:299,rugRunner:189,rugTufted:379,rugOval:279
+};
+
+function calcTotal(){
+  const t=furniture.reduce((s,f)=>s+(PRICES[f.type]||0),0);
+  $('totalPrice').textContent='$'+t.toLocaleString();
+}
+
+/* ─────────────────────────────────────────────
+   RENDERER
+───────────────────────────────────────────── */
 prog(10,'Building renderer…');
 const vp=$('vp');
 const renderer=new THREE.WebGLRenderer({antialias:true});
@@ -149,7 +301,9 @@ renderer.toneMappingExposure=1.1;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 vp.appendChild(renderer.domElement);
 
-/* ── Scene & camera ───────────────────────── */
+/* ─────────────────────────────────────────────
+   SCENE & CAMERA
+───────────────────────────────────────────── */
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0xf5f0e8);
 scene.fog=new THREE.Fog(0xf5f0e8,18,30);
@@ -161,7 +315,9 @@ controls.minDistance=3; controls.maxDistance=20;
 controls.maxPolarAngle=Math.PI/2-0.02;
 controls.target.set(0,0.5,0);
 
-/* ── Lighting ─────────────────────────────── */
+/* ─────────────────────────────────────────────
+   LIGHTING
+───────────────────────────────────────────── */
 scene.add(new THREE.AmbientLight(0xfff8f0,0.6));
 const sun=new THREE.DirectionalLight(0xfff4d6,1.8);
 sun.position.set(5,10,7); sun.castShadow=true;
@@ -170,9 +326,12 @@ Object.assign(sun.shadow.camera,{near:0.5,far:40,left:-10,right:10,top:10,bottom
 sun.shadow.bias=-0.001; scene.add(sun);
 scene.add(Object.assign(new THREE.DirectionalLight(0xd0e8ff,0.4),{position:new THREE.Vector3(-6,5,-4)}));
 
-/* ── Wood floor texture ───────────────────── */
-prog(20,'Building room…');
-function makeWood(){
+/* ─────────────────────────────────────────────
+   FLOOR TEXTURES
+───────────────────────────────────────────── */
+prog(18,'Generating textures…');
+
+function makeParquet(){
   const c=document.createElement('canvas'); c.width=c.height=512;
   const ctx=c.getContext('2d');
   for(let i=0;i<8;i++){
@@ -186,33 +345,155 @@ function makeWood(){
   const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(4,4); return t;
 }
 
-/* ── Room geometry ────────────────────────── */
-const W=10,D=10,H=3.2;
-const wallM=new THREE.MeshStandardMaterial({color:0xeceae4,roughness:.9});
-const floorM=new THREE.MeshStandardMaterial({map:makeWood(),roughness:.6});
+function makeLaminate(){
+  const c=document.createElement('canvas'); c.width=512; c.height=512;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#3a2a18'; ctx.fillRect(0,0,512,512);
+  for(let i=0;i<6;i++){
+    const y=i*(512/6);
+    const grad=ctx.createLinearGradient(0,y,0,y+512/6);
+    grad.addColorStop(0,'#3a2a18'); grad.addColorStop(.45,'#4e3824'); grad.addColorStop(.55,'#3f2e1c'); grad.addColorStop(1,'#3a2a18');
+    ctx.fillStyle=grad; ctx.fillRect(0,y,512,512/6);
+    for(let g=0;g<8;g++){
+      const gx=Math.random()*512; ctx.strokeStyle='rgba(0,0,0,.12)'; ctx.lineWidth=.6+Math.random()*.4;
+      ctx.beginPath(); ctx.moveTo(gx,y); ctx.lineTo(gx+Math.random()*10-5,y+512/6); ctx.stroke();
+    }
+    ctx.fillStyle='rgba(0,0,0,.3)'; ctx.fillRect(0,y+512/6-1,512,1.5);
+  }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(3,3); return t;
+}
 
-// Floor
-const fl=new THREE.Mesh(new THREE.PlaneGeometry(W,D),floorM); fl.rotation.x=-Math.PI/2; fl.receiveShadow=true; scene.add(fl);
-// Ceiling
-const ce=new THREE.Mesh(new THREE.PlaneGeometry(W,D),new THREE.MeshStandardMaterial({color:0xf5f3ef,roughness:1})); ce.rotation.x=Math.PI/2; ce.position.y=H; scene.add(ce);
-// Walls
+function makeLinoleum(){
+  const c=document.createElement('canvas'); c.width=c.height=512;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#9aa0a6'; ctx.fillRect(0,0,512,512);
+  for(let i=0;i<3000;i++){
+    ctx.fillStyle=`rgba(${Math.random()>.5?255:0},${Math.random()>.5?255:0},${Math.random()>.5?255:0},0.012)`;
+    ctx.fillRect(Math.random()*512,Math.random()*512,1,1);
+  }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(6,6); return t;
+}
+
+/* ─────────────────────────────────────────────
+   WALLPAPER TEXTURES
+───────────────────────────────────────────── */
+function makeStripes(baseColor='#eceae4'){
+  const c=document.createElement('canvas'); c.width=128; c.height=256;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle=baseColor; ctx.fillRect(0,0,128,256);
+  for(let x=0;x<128;x+=20){
+    ctx.fillStyle='rgba(0,0,0,0.07)'; ctx.fillRect(x,0,10,256);
+  }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(6,3); return t;
+}
+
+function makeHerringbone(baseColor='#eceae4'){
+  const c=document.createElement('canvas'); c.width=128; c.height=128;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle=baseColor; ctx.fillRect(0,0,128,128);
+  ctx.strokeStyle='rgba(0,0,0,0.09)'; ctx.lineWidth=2;
+  const s=18;
+  for(let row=-2;row<10;row++){
+    for(let col=-2;col<10;col++){
+      const ox=col*s*2+(row%2)*s, oy=row*s;
+      ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ox+s,oy+s); ctx.lineTo(ox+s*2,oy); ctx.stroke();
+    }
+  }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(8,6); return t;
+}
+
+/* ── Wallpaper previews in dropdowns ── */
+function drawPreview(canvas, drawFn){
+  const ctx=canvas.getContext('2d'); drawFn(ctx,canvas.width,canvas.height);
+}
+drawPreview($('wpPrev1'),(ctx,w,h)=>{
+  ctx.fillStyle='#eceae4'; ctx.fillRect(0,0,w,h);
+  for(let x=0;x<w;x+=7){ctx.fillStyle='rgba(0,0,0,.07)';ctx.fillRect(x,0,3,h);}
+});
+drawPreview($('wpPrev2'),(ctx,w,h)=>{
+  ctx.fillStyle='#eceae4'; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle='rgba(0,0,0,.09)'; ctx.lineWidth=1;
+  const s=6;
+  for(let row=-1;row<h/s+2;row++){
+    for(let col=-1;col<w/s+2;col++){
+      const ox=col*s*2+(row%2)*s,oy=row*s;
+      ctx.beginPath();ctx.moveTo(ox,oy);ctx.lineTo(ox+s,oy+s);ctx.lineTo(ox+s*2,oy);ctx.stroke();
+    }
+  }
+});
+
+/* ─────────────────────────────────────────────
+   ROOM GEOMETRY
+───────────────────────────────────────────── */
+prog(30,'Building room…');
+const W=10,D=10,H=3.2;
+
+const floorM=new THREE.MeshStandardMaterial({map:makeParquet(),roughness:.6});
+const wallM=new THREE.MeshStandardMaterial({color:0xeceae4,roughness:.9});
+
+const floorMesh=new THREE.Mesh(new THREE.PlaneGeometry(W,D),floorM);
+floorMesh.rotation.x=-Math.PI/2; floorMesh.receiveShadow=true; scene.add(floorMesh);
+
+const ceil=new THREE.Mesh(new THREE.PlaneGeometry(W,D),new THREE.MeshStandardMaterial({color:0xf5f3ef,roughness:1}));
+ceil.rotation.x=Math.PI/2; ceil.position.y=H; scene.add(ceil);
+
+const wallMeshes=[];
 [[0,H/2,-D/2,0,W,H],[0,H/2,D/2,Math.PI,W,H],[-W/2,H/2,0,Math.PI/2,D,H],[W/2,H/2,0,-Math.PI/2,D,H]].forEach(([x,y,z,ry,w,h])=>{
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),wallM); m.position.set(x,y,z); m.rotation.y=ry; m.receiveShadow=true; scene.add(m);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),wallM.clone());
+  m.position.set(x,y,z); m.rotation.y=ry; m.receiveShadow=true; scene.add(m); wallMeshes.push(m);
 });
+
 // Skirting
-[[W,0,-D/2+.025,0],[D,0,-W/2+.025,Math.PI/2],[D,0,W/2-.025,Math.PI/2]].forEach(([w,_z,z,ry],i)=>{
-  const x=i===1?-W/2+(i===1?.025:0):i===2?W/2-.025:0;
-  const sk=new THREE.Mesh(new THREE.BoxGeometry(w,.1,.05),new THREE.MeshStandardMaterial({color:0xddd8cc,roughness:.9}));
-  sk.position.set(i===0?0:i===1?-W/2+.025:W/2-.025,.05,i===0?-D/2+.025:0); sk.rotation.y=ry; sk.receiveShadow=true; scene.add(sk);
+const skirtM=new THREE.MeshStandardMaterial({color:0xddd8cc,roughness:.9});
+[{w:W,pos:[0,.05,-D/2+.025],ry:0},{w:D,pos:[-W/2+.025,.05,0],ry:Math.PI/2},{w:D,pos:[W/2-.025,.05,0],ry:Math.PI/2}].forEach(({w,pos,ry})=>{
+  const sk=new THREE.Mesh(new THREE.BoxGeometry(w,.1,.05),skirtM);
+  sk.position.set(...pos); sk.rotation.y=ry; sk.receiveShadow=true; scene.add(sk);
 });
-// Window on right wall
-const glass=new THREE.Mesh(new THREE.PlaneGeometry(2,1.3),new THREE.MeshStandardMaterial({color:0xc8dde8,transparent:true,opacity:.35,roughness:.05,side:THREE.DoubleSide}));
+
+// Window
+const glassM=new THREE.MeshStandardMaterial({color:0xc8dde8,transparent:true,opacity:.35,roughness:.05,side:THREE.DoubleSide});
+const glass=new THREE.Mesh(new THREE.PlaneGeometry(2,1.3),glassM);
 glass.rotation.y=-Math.PI/2; glass.position.set(W/2-.06,1.8,0); scene.add(glass);
 const wfr=new THREE.Mesh(new THREE.BoxGeometry(.06,1.4,2.15),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.3}));
 wfr.position.set(W/2-.03,1.8,0); scene.add(wfr);
 
-/* ── Material palette ─────────────────────── */
-prog(40,'Loading materials…');
+/* ─────────────────────────────────────────────
+   FLOOR SWITCHER
+───────────────────────────────────────────── */
+function setFloor(type){
+  const texMap={parquet:makeParquet,laminate:makeLaminate,linoleum:makeLinoleum};
+  if(floorM.map) floorM.map.dispose();
+  floorM.map=texMap[type]();
+  floorM.roughness=type==='linoleum'?.85:.6;
+  floorM.needsUpdate=true;
+}
+
+/* ─────────────────────────────────────────────
+   WALL SWITCHER
+───────────────────────────────────────────── */
+function setWallColor(hexNum){
+  wallMeshes.forEach(m=>{
+    m.material.map=null;
+    m.material.color.set(hexNum);
+    m.material.needsUpdate=true;
+  });
+}
+function setWallPaper(type){
+  const colorHex=0xeceae4;
+  const texFn=type==='stripes'?makeStripes:makeHerringbone;
+  const tex=texFn();
+  wallMeshes.forEach(m=>{
+    if(m.material.map) m.material.map.dispose();
+    m.material.map=tex;
+    m.material.color.set(0xffffff);
+    m.material.needsUpdate=true;
+  });
+}
+
+/* ─────────────────────────────────────────────
+   MATERIAL PALETTE
+───────────────────────────────────────────── */
+prog(45,'Loading materials…');
 const M={
   fabric:  new THREE.MeshStandardMaterial({color:0x8fa8c4,roughness:.85}),
   fabricD: new THREE.MeshStandardMaterial({color:0x6d8aaa,roughness:.85}),
@@ -230,7 +511,9 @@ const bx=(w,h,d,m)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.ca
 const cy=(rt,rb,h,s,m)=>{const o=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,s),m);o.castShadow=true;o.receiveShadow=true;return o;};
 const add=(g,mesh,x=0,y=0,z=0,rx=0,ry=0,rz=0)=>{mesh.position.set(x,y,z);if(rx||ry||rz)mesh.rotation.set(rx,ry,rz);g.add(mesh);return mesh;};
 
-/* ── Furniture builders ───────────────────── */
+/* ─────────────────────────────────────────────
+   FURNITURE BUILDERS
+───────────────────────────────────────────── */
 const BUILDERS={
   sofa(){
     const g=new THREE.Group();
@@ -324,15 +607,72 @@ const BUILDERS={
     add(g,cy(.025,.025,.2,6,M.green),0,.38,0);
     return g;
   },
-  rug(){
+
+  /* ── RUGS ── */
+  rugRect(){
     const g=new THREE.Group();
-    const border=new THREE.Mesh(new THREE.PlaneGeometry(2.1,1.5),new THREE.MeshStandardMaterial({color:0x4a3a2a,roughness:1}));border.rotation.x=-Math.PI/2;border.position.y=.002;border.receiveShadow=true;g.add(border);
-    const rug=new THREE.Mesh(new THREE.PlaneGeometry(2,1.4),new THREE.MeshStandardMaterial({color:0x7b5f4a,roughness:1}));rug.rotation.x=-Math.PI/2;rug.position.y=.005;rug.receiveShadow=true;g.add(rug);
+    const bM=new THREE.MeshStandardMaterial({color:0x6a3c28,roughness:1});
+    const rM=new THREE.MeshStandardMaterial({color:0xc4633a,roughness:1});
+    const innerM=new THREE.MeshStandardMaterial({color:0xd4855c,roughness:1});
+    const border=new THREE.Mesh(new THREE.PlaneGeometry(2.1,1.5),bM);border.rotation.x=-Math.PI/2;border.position.y=.002;border.receiveShadow=true;g.add(border);
+    const main=new THREE.Mesh(new THREE.PlaneGeometry(1.96,1.36),rM);main.rotation.x=-Math.PI/2;main.position.y=.004;main.receiveShadow=true;g.add(main);
+    const inner=new THREE.Mesh(new THREE.PlaneGeometry(1.6,1.0),innerM);inner.rotation.x=-Math.PI/2;inner.position.y=.006;inner.receiveShadow=true;g.add(inner);
+    return g;
+  },
+  rugRound(){
+    const g=new THREE.Group();
+    const segs=48;
+    const bM=new THREE.MeshStandardMaterial({color:0x1e3054,roughness:1,side:THREE.DoubleSide});
+    const rM=new THREE.MeshStandardMaterial({color:0x2e4a82,roughness:1,side:THREE.DoubleSide});
+    const iM=new THREE.MeshStandardMaterial({color:0x4a6bb5,roughness:1,side:THREE.DoubleSide});
+    const hM=new THREE.MeshStandardMaterial({color:0xd4c08a,roughness:1,side:THREE.DoubleSide});
+    const border=new THREE.Mesh(new THREE.CircleGeometry(.85,segs),bM);border.rotation.x=-Math.PI/2;border.position.y=.002;border.receiveShadow=true;g.add(border);
+    const mid=new THREE.Mesh(new THREE.CircleGeometry(.78,segs),rM);mid.rotation.x=-Math.PI/2;mid.position.y=.004;mid.receiveShadow=true;g.add(mid);
+    const inn=new THREE.Mesh(new THREE.CircleGeometry(.5,segs),iM);inn.rotation.x=-Math.PI/2;inn.position.y=.006;inn.receiveShadow=true;g.add(inn);
+    const center=new THREE.Mesh(new THREE.CircleGeometry(.22,segs),hM);center.rotation.x=-Math.PI/2;center.position.y=.008;center.receiveShadow=true;g.add(center);
+    return g;
+  },
+  rugRunner(){
+    const g=new THREE.Group();
+    const bM=new THREE.MeshStandardMaterial({color:0x2d4a2d,roughness:1});
+    const rM=new THREE.MeshStandardMaterial({color:0x3d6b3d,roughness:1});
+    const aM=new THREE.MeshStandardMaterial({color:0x6aaa6a,roughness:1});
+    const border=new THREE.Mesh(new THREE.PlaneGeometry(2.5,.76),bM);border.rotation.x=-Math.PI/2;border.position.y=.002;border.receiveShadow=true;g.add(border);
+    const main=new THREE.Mesh(new THREE.PlaneGeometry(2.36,.62),rM);main.rotation.x=-Math.PI/2;main.position.y=.004;main.receiveShadow=true;g.add(main);
+    // Accent stripes
+    [-0.9,0,0.9].forEach(x=>{const s=new THREE.Mesh(new THREE.PlaneGeometry(.06,.5),aM);s.rotation.x=-Math.PI/2;s.position.set(x,.006,0);s.receiveShadow=true;g.add(s);});
+    return g;
+  },
+  rugTufted(){
+    const g=new THREE.Group();
+    const b1=new THREE.MeshStandardMaterial({color:0x2c2c40,roughness:1});
+    const b2=new THREE.MeshStandardMaterial({color:0x44445a,roughness:1});
+    const acc=new THREE.MeshStandardMaterial({color:0xc8a45a,roughness:1});
+    const border=new THREE.Mesh(new THREE.PlaneGeometry(1.9,1.3),b1);border.rotation.x=-Math.PI/2;border.position.y=.002;border.receiveShadow=true;g.add(border);
+    const main=new THREE.Mesh(new THREE.PlaneGeometry(1.76,1.16),b2);main.rotation.x=-Math.PI/2;main.position.y=.004;main.receiveShadow=true;g.add(main);
+    // Geometric diamond pattern
+    [[-0.5,0],[0,0],[0.5,0],[-.25,.3],[.25,.3],[-.25,-.3],[.25,-.3]].forEach(([x,z])=>{
+      const d=new THREE.Mesh(new THREE.PlaneGeometry(.18,.18),acc);d.rotation.x=-Math.PI/2;d.rotation.z=Math.PI/4;d.position.set(x,.006,z);d.receiveShadow=true;g.add(d);
+    });
+    return g;
+  },
+  rugOval(){
+    const g=new THREE.Group();
+    const segs=48;
+    // Approximate oval with scaled circle
+    const bM=new THREE.MeshStandardMaterial({color:0xd4c9b0,roughness:1});
+    const rM=new THREE.MeshStandardMaterial({color:0xe8e0ce,roughness:1});
+    const iM=new THREE.MeshStandardMaterial({color:0xbfb49a,roughness:1});
+    const b=new THREE.Mesh(new THREE.CircleGeometry(1,segs),bM);b.rotation.x=-Math.PI/2;b.position.y=.002;b.scale.set(1,.7,1);b.receiveShadow=true;g.add(b);
+    const m=new THREE.Mesh(new THREE.CircleGeometry(.9,segs),rM);m.rotation.x=-Math.PI/2;m.position.y=.004;m.scale.set(1,.7,1);m.receiveShadow=true;g.add(m);
+    const i2=new THREE.Mesh(new THREE.CircleGeometry(.65,segs),iM);i2.rotation.x=-Math.PI/2;i2.position.y=.006;i2.scale.set(1,.7,1);i2.receiveShadow=true;g.add(i2);
     return g;
   }
 };
 
-/* ── Furniture management ─────────────────── */
+/* ─────────────────────────────────────────────
+   FURNITURE MANAGEMENT
+───────────────────────────────────────────── */
 prog(70,'Placing furniture…');
 const furniture=[];
 const FLOOR=new THREE.Plane(new THREE.Vector3(0,1,0),0);
@@ -340,28 +680,32 @@ const ray=new THREE.Raycaster(), mouse=new THREE.Vector2();
 
 function clampRoom(v){const hw=W/2-.5,hd=D/2-.5;v.x=Math.max(-hw,Math.min(hw,v.x));v.z=Math.max(-hd,Math.min(hd,v.z));}
 
-function addFurniture(type,label,x=0,z=0){
+function addFurniture(type,label,price,x=0,z=0){
   const builder=BUILDERS[type]; if(!builder) return null;
   const group=builder();
   group.position.set(x,0,z);
-  group.userData={type,label};
+  group.userData={type,label,price:price||PRICES[type]||0};
   group.traverse(c=>{if(c.isMesh){c.userData.fg=group;c.castShadow=true;c.receiveShadow=true;}});
   scene.add(group);
   group.scale.set(.01,.01,.01);
   let t0=null;
   const anim=ts=>{if(!t0)t0=ts;const t=Math.min((ts-t0)/380,1),e=1-Math.pow(1-t,3),s=.01+e*.99;group.scale.set(s,s,s);if(t<1)requestAnimationFrame(anim);};
   requestAnimationFrame(anim);
-  furniture.push({group,type,label});
+  furniture.push({group,type,label,price:group.userData.price});
+  calcTotal();
   return group;
 }
 
-// Default room layout
-addFurniture('sofa','2-Seat Sofa',-1.5,-1.5);
-addFurniture('coffeetable','Coffee Table',-1.5,-.3);
-addFurniture('plant','Plant',2,-2);
-addFurniture('floorlamp','Floor Lamp',-3.5,-2.2);
+// Default room
+addFurniture('sofa','2-Seat Sofa',1299,-1.5,-1.5);
+addFurniture('coffeetable','Coffee Table',449,-1.5,-.3);
+addFurniture('plant','Plant',89,2,-2);
+addFurniture('floorlamp','Floor Lamp',289,-3.5,-2.2);
+addFurniture('rugRect','Classic Rug',249,0,0);
 
-/* ── Selection & drag ─────────────────────── */
+/* ─────────────────────────────────────────────
+   SELECTION & DRAG
+───────────────────────────────────────────── */
 let selected=null, dragging=null, dragOffset=new THREE.Vector3(), pDown={x:0,y:0}, moved=false;
 
 function highlight(fi,on){
@@ -374,8 +718,13 @@ function highlight(fi,on){
 function setSelected(fi){
   if(selected) highlight(selected,false);
   selected=fi;
-  if(fi){highlight(fi,true);$('sname').textContent=fi.label;updateSelPos(fi.group.position);$('sp').style.display='block';}
-  else{$('sp').style.display='none';}
+  if(fi){
+    highlight(fi,true);
+    $('sname').textContent=fi.label;
+    updateSelPos(fi.group.position);
+    $('sprice').textContent='$'+fi.price.toLocaleString();
+    $('sp').style.display='block';
+  } else { $('sp').style.display='none'; }
 }
 function updateSelPos(p){$('spos').textContent=`X: ${p.x.toFixed(2)}m  Z: ${p.z.toFixed(2)}m`;}
 
@@ -420,11 +769,24 @@ renderer.domElement.addEventListener('pointerup',e=>{
   }
 });
 
-$('dbtn').addEventListener('click',()=>{if(!selected)return;scene.remove(selected.group);furniture.splice(furniture.indexOf(selected),1);setSelected(null);});
-document.addEventListener('keydown',e=>{if((e.key==='Delete'||e.key==='Backspace')&&selected&&document.activeElement===document.body){scene.remove(selected.group);furniture.splice(furniture.indexOf(selected),1);setSelected(null);}});
-$('clearBtn').addEventListener('click',()=>{furniture.forEach(f=>scene.remove(f.group));furniture.length=0;setSelected(null);});
+$('dbtn').addEventListener('click',()=>{
+  if(!selected)return;
+  scene.remove(selected.group);
+  furniture.splice(furniture.indexOf(selected),1);
+  setSelected(null); calcTotal();
+});
+document.addEventListener('keydown',e=>{
+  if((e.key==='Delete'||e.key==='Backspace')&&selected&&document.activeElement===document.body){
+    scene.remove(selected.group);furniture.splice(furniture.indexOf(selected),1);setSelected(null);calcTotal();
+  }
+});
+$('clearBtn').addEventListener('click',()=>{
+  furniture.forEach(f=>scene.remove(f.group));furniture.length=0;setSelected(null);calcTotal();
+});
 
-/* ── Sidebar accordion ────────────────────── */
+/* ─────────────────────────────────────────────
+   SIDEBAR ACCORDION
+───────────────────────────────────────────── */
 document.querySelectorAll('.cl').forEach(lbl=>{
   lbl.addEventListener('click',()=>{
     const cat=lbl.dataset.cat,items=$('cat-'+cat),open=items.classList.contains('open');
@@ -434,27 +796,82 @@ document.querySelectorAll('.cl').forEach(lbl=>{
   });
 });
 
-/* ── Click-to-add & drag-from-sidebar ─────── */
+/* ─────────────────────────────────────────────
+   CLICK-TO-ADD & DRAG-FROM-SIDEBAR
+───────────────────────────────────────────── */
 let dropPending=null;
 document.querySelectorAll('.fi').forEach(el=>{
   el.addEventListener('click',()=>{
     const x=(Math.random()-.5)*5,z=(Math.random()-.5)*5;
-    addFurniture(el.dataset.type,el.dataset.label,x,z);
+    addFurniture(el.dataset.type,el.dataset.label,parseInt(el.dataset.price||0),x,z);
     setTimeout(()=>setSelected(furniture[furniture.length-1]),420);
   });
-  el.addEventListener('mousedown',e=>{e.stopPropagation();dropPending={type:el.dataset.type,label:el.dataset.label};});
+  el.addEventListener('mousedown',e=>{e.stopPropagation();dropPending={type:el.dataset.type,label:el.dataset.label,price:parseInt(el.dataset.price||0)};});
 });
 document.addEventListener('mouseup',e=>{
   if(!dropPending)return;
   const r=renderer.domElement.getBoundingClientRect();
   if(e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom){
     const nx=((e.clientX-r.left)/r.width)*2-1,ny=-((e.clientY-r.top)/r.height)*2+1;
-    const fp=floorAt(nx,ny);if(fp){clampRoom(fp);addFurniture(dropPending.type,dropPending.label,fp.x,fp.z);}
+    const fp=floorAt(nx,ny);if(fp){clampRoom(fp);addFurniture(dropPending.type,dropPending.label,dropPending.price,fp.x,fp.z);}
   }
   dropPending=null;
 });
 
-/* ── Resize & render loop ─────────────────── */
+/* ─────────────────────────────────────────────
+   DROPDOWN MENUS (Finishing & Wall)
+───────────────────────────────────────────── */
+function positionDD(dd,btn){
+  const br=btn.getBoundingClientRect();
+  dd.style.left=br.left+'px';
+  dd.style.top=(br.bottom+6)+'px';
+}
+
+function toggleDD(dd,btn){
+  const other=dd===finDD?wallDD:finDD;
+  other.classList.remove('open');
+  document.getElementById(other===finDD?'finBtn':'wallBtn').classList.remove('active-menu');
+  if(dd.classList.contains('open')){dd.classList.remove('open');btn.classList.remove('active-menu');}
+  else{positionDD(dd,btn);dd.classList.add('open');btn.classList.add('active-menu');}
+}
+
+const finDD=$('finDD'), wallDD=$('wallDD');
+$('finBtn').addEventListener('click',e=>{e.stopPropagation();toggleDD(finDD,$('finBtn'));});
+$('wallBtn').addEventListener('click',e=>{e.stopPropagation();toggleDD(wallDD,$('wallBtn'));});
+document.addEventListener('click',()=>{finDD.classList.remove('open');wallDD.classList.remove('open');$('finBtn').classList.remove('active-menu');$('wallBtn').classList.remove('active-menu');});
+[finDD,wallDD].forEach(dd=>dd.addEventListener('click',e=>e.stopPropagation()));
+
+// Floor options
+document.querySelectorAll('.fin-opt').forEach(opt=>{
+  opt.addEventListener('click',()=>{
+    document.querySelectorAll('.fin-opt').forEach(o=>o.classList.remove('sel'));
+    opt.classList.add('sel');
+    setFloor(opt.dataset.floor);
+  });
+});
+
+// Wall color swatches
+document.querySelectorAll('.wall-swatch').forEach(sw=>{
+  sw.addEventListener('click',()=>{
+    document.querySelectorAll('.wall-swatch,.wp-opt').forEach(o=>o.classList.remove('sel'));
+    sw.classList.add('sel');
+    const hex=parseInt(sw.dataset.color);
+    setWallColor(hex);
+  });
+});
+
+// Wallpaper options
+document.querySelectorAll('.wp-opt').forEach(opt=>{
+  opt.addEventListener('click',()=>{
+    document.querySelectorAll('.wall-swatch,.wp-opt').forEach(o=>o.classList.remove('sel'));
+    opt.classList.add('sel');
+    setWallPaper(opt.dataset.wall);
+  });
+});
+
+/* ─────────────────────────────────────────────
+   RESIZE & RENDER LOOP
+───────────────────────────────────────────── */
 window.addEventListener('resize',()=>{
   camera.aspect=vp.clientWidth/vp.clientHeight;camera.updateProjectionMatrix();
   renderer.setSize(vp.clientWidth,vp.clientHeight);
