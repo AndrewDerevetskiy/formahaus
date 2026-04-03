@@ -644,9 +644,11 @@ export default function FormaHaus() {
   /* ── Delete key ─────────────────────────────────────────── */
   const deleteSelected=useCallback(()=>{
     const s=sceneRef.current; if(!s?.selected) return;
+    const price=s.selected.price;
+    const id=s.selected.id;
     s.scene.remove(s.selected.group);
-    const idx=s.items.findIndex(i=>i.id===s.selected!.id);
-    if(idx>=0){ setTotal(t=>t-s.selected!.price); setItemCount(c=>c-1); s.items.splice(idx,1); }
+    const idx=s.items.findIndex(i=>i.id===id);
+    if(idx>=0){ setTotal(t=>t-price); setItemCount(c=>c-1); s.items.splice(idx,1); }
     s.selected=null; setSelId(""); setSelLabel(""); setSelPrice(0);
   },[]);
   useEffect(()=>{

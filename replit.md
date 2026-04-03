@@ -50,6 +50,22 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 
 ## Packages
 
+### `artifacts/furniture-store` (`@workspace/furniture-store`)
+
+**FormaHaus** — Professional 3D interior design tool / e-commerce site.
+
+- Port: `23155`, serves at path `/`
+- Stack: React + Vite + TypeScript, Three.js (`three@0.160.0`), Tailwind CSS, shadcn/ui, wouter
+- Entry: `src/main.tsx` → `src/App.tsx` (wouter router)
+- **Routes**:
+  - `/` → `src/pages/Home.tsx` — e-commerce storefront (hero, product grid with Unsplash photos, CTA)
+  - `/designer` → `src/components/FormaHaus.tsx` — 3D room editor
+- **3D Editor** (`FormaHaus.tsx`): Full Three.js scene with OrbitControls, 14 furniture types built via procedural geometry using `MeshStandardMaterial` (PBR), canvas-generated floor textures (oak herringbone, walnut plank, marble, concrete), drag-to-place furniture, real-time pricing
+- **Thumbnail generation**: Off-screen WebGL renderer in `generateThumbnail()` creates actual 3D previews per furniture type for sidebar cards
+- **CSS theme**: `src/index.css` — warm neutral palette (30 20% 99% background, amber gold accent), all CSS variables properly set for shadcn/ui
+- **Position rule**: All Three.js position changes use `.position.set(x,y,z)` or `.position.copy(v)` — never direct assignment
+- **WebGL guard**: Both main renderer and thumbnail renderer wrapped in try-catch for graceful fallback in headless environments
+
 ### `artifacts/api-server` (`@workspace/api-server`)
 
 Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
