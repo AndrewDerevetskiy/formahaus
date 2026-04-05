@@ -124,26 +124,329 @@ const MAT = {
 };
 
 /* ══════════════════════════════════════════════════════════════
-   FURNITURE GEOMETRY BUILDERS
+   FURNITURE GEOMETRY BUILDERS  — upgraded with LatheGeometry,
+   higher segment counts, bevelled edges, richer PBR materials.
 ══════════════════════════════════════════════════════════════ */
-function bx(w:number,h:number,d:number,mat:THREE.Material){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d,2,2,2),mat);m.castShadow=true;m.receiveShadow=true;return m;}
-function cy(rt:number,rb:number,h:number,seg:number,mat:THREE.Material){const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat);m.castShadow=true;m.receiveShadow=true;return m;}
-function sp(r:number,mat:THREE.Material){const m=new THREE.Mesh(new THREE.SphereGeometry(r,16,12),mat);m.castShadow=true;m.receiveShadow=true;return m;}
 
-function buildSofa(){const g=new THREE.Group();const up=MAT.fabric(0x8C7360),cu=MAT.fabric(0xA08470),lm=MAT.wood(0x4A3728);const base=bx(2.2,.38,1,up);base.position.set(0,.19,0);g.add(base);const back=bx(2.2,.62,.2,up);back.position.set(0,.61,-.4);g.add(back);const a1=bx(.18,.42,1,up);a1.position.set(-1.01,.36,0);g.add(a1);const a2=bx(.18,.42,1,up);a2.position.set(1.01,.36,0);g.add(a2);for(let i=0;i<3;i++){const c=bx(.65,.14,.82,cu);c.position.set(-0.66+i*.66,.43,.04);g.add(c);}for(let i=0;i<3;i++){const c=bx(.65,.44,.14,MAT.fabric(0x9A7E6A));c.position.set(-0.66+i*.66,.62,-.31);g.add(c);}for(const[x,z]of[[-0.95,-.4],[.95,-.4],[-0.95,.4],[.95,.4]] as[number,number][]){const l=cy(.035,.025,.13,8,lm);l.position.set(x,.065,z);g.add(l);}return g;}
-function buildArmchair(){const g=new THREE.Group();const f=MAT.fabric(0xA08060),l=MAT.wood(0x3A2818);const base=bx(1.0,.36,.9,f);base.position.set(0,.18,0);g.add(base);const back=bx(1.0,.56,.18,f);back.position.set(0,.58,-.36);g.add(back);const a1=bx(.16,.34,.82,MAT.fabric(0x907050));a1.position.set(-.42,.3,0);g.add(a1);const a2=bx(.16,.34,.82,MAT.fabric(0x907050));a2.position.set(.42,.3,0);g.add(a2);const seat=bx(.74,.12,.68,MAT.fabric(0xB09070));seat.position.set(0,.40,.04);g.add(seat);const bc=bx(.74,.48,.12,MAT.fabric(0xB09070));bc.position.set(0,.58,-.28);g.add(bc);for(const[x,z]of[[-.36,-.36],[.36,-.36],[-.36,.36],[.36,.36]] as[number,number][]){const lp=cy(.032,.022,.12,8,l);lp.position.set(x,.06,z);g.add(lp);}return g;}
-function buildBench(){const g=new THREE.Group();const seat=bx(1.7,.12,.48,MAT.fabric(0x6A8A6A));seat.position.set(0,.38,0);g.add(seat);const fr=bx(1.62,.06,.42,MAT.wood(0x5A3A18));fr.position.set(0,.32,0);g.add(fr);for(const[x,z]of[[-.72,-.16],[.72,-.16],[-.72,.16],[.72,.16]] as[number,number][]){const lp=cy(.03,.025,.3,8,MAT.metal(0x707070));lp.position.set(x,.15,z);g.add(lp);}const cb=bx(1.36,.04,.04,MAT.metal(0x707070));cb.position.set(0,.08,0);g.add(cb);return g;}
-function buildCoffeeTable(){const g=new THREE.Group();const tm=MAT.wood(0xD8B888),lm=MAT.metal(0x505050);const top=bx(1.35,.07,.75,tm);top.position.set(0,.39,0);g.add(top);const sh=bx(1.1,.05,.55,tm);sh.position.set(0,.14,0);g.add(sh);for(const[x,z]of[[-.55,-.3],[.55,-.3],[-.55,.3],[.55,.3]] as[number,number][]){const l=cy(.025,.025,.34,6,lm);l.position.set(x,.17,z);g.add(l);}return g;}
-function buildDiningTable(){const g=new THREE.Group();const tm=MAT.wood(0xDCBE8A),lm=MAT.wood(0x5A3A18);const top=bx(2.1,.06,1.05,tm);top.position.set(0,.78,0);g.add(top);for(const[x,z]of[[-.9,-.45],[.9,-.45],[-.9,.45],[.9,.45]] as[number,number][]){const l=cy(.045,.035,.72,8,lm);l.position.set(x,.36,z);g.add(l);}return g;}
-function buildSideTable(){const g=new THREE.Group();const top=bx(.58,.04,.58,MAT.marble());top.position.set(0,.60,0);g.add(top);const stem=cy(.04,.04,.54,12,MAT.metal(0xC8A840));stem.position.set(0,.27,0);g.add(stem);const base=cy(.22,.22,.04,16,MAT.metal(0xC8A840));base.position.set(0,.02,0);g.add(base);return g;}
-function buildBookshelf(){const g=new THREE.Group();const fr=MAT.wood(0xD8C0A0);const cols=[0xCC4444,0x4466CC,0x44AA44,0xCC8844,0x9944CC,0xCC4488,0x888844,0x44AACC];const s1=bx(.04,2.0,.38,fr);s1.position.set(-.52,1.0,0);g.add(s1);const s2=bx(.04,2.0,.38,fr);s2.position.set(.52,1.0,0);g.add(s2);const topP=bx(1.08,.04,.38,fr);topP.position.set(0,1.98,0);g.add(topP);const bot=bx(1.08,.04,.38,fr);bot.position.set(0,.02,0);g.add(bot);const bk=bx(1.08,1.98,.02,MAT.wood(0xC8B090));bk.position.set(0,1.0,-.18);g.add(bk);for(let i=1;i<=4;i++){const sh=bx(1.0,.04,.36,MAT.wood(0xE0C8A8));sh.position.set(0,i*.42,0);g.add(sh);}for(let s=0;s<5;s++){let xO=-.42;const n=4+Math.floor(Math.random()*5);for(let b=0;b<n&&xO<.38;b++){const bw=.03+Math.random()*.04,bh=.18+Math.random()*.16;const book=bx(bw,bh,.28,new THREE.MeshStandardMaterial({color:cols[Math.floor(Math.random()*cols.length)],roughness:.8}));book.position.set(xO+bw/2,s*.42+.03+bh/2,0);g.add(book);xO+=bw+.005;}}return g;}
-function buildCabinet(){const g=new THREE.Group();const dm=MAT.wood(0xCCC0A8),hw=MAT.metal(0xB0A080);const bl=bx(1.65,1.0,.5,MAT.wood(0xD8C8B0));bl.position.set(0,.5,0);g.add(bl);for(let i=0;i<3;i++){const d=bx(.5,.88,.03,dm);d.position.set(-0.55+i*.55,.5,.26);g.add(d);const h=cy(.015,.015,.07,8,hw);h.position.set(-0.55+i*.55,.5,.29);h.rotation.set(Math.PI/2,0,0);g.add(h);}for(const[x,z]of[[-.72,-.18],[.72,-.18],[-.72,.18],[.72,.18]] as[number,number][]){const l=cy(.025,.025,.08,8,hw);l.position.set(x,.04,z);g.add(l);}return g;}
-function buildFloorLamp(){const g=new THREE.Group();const mt=MAT.metal(0xC8B860);const base2=cy(.22,.22,.05,24,MAT.marble());base2.position.set(0,.025,0);g.add(base2);const stem=cy(.02,.02,1.6,8,mt);stem.position.set(0,.82,0);g.add(stem);const joint=sp(.035,mt);joint.position.set(0,1.62,0);g.add(joint);const shade=cy(.28,.16,.26,20,MAT.fabric(0xFFF8E8));shade.position.set(0,1.7,0);g.add(shade);const bulb=new THREE.Mesh(new THREE.SphereGeometry(.06,12,8),new THREE.MeshStandardMaterial({color:0xFFFFCC,emissive:new THREE.Color(0xFFEEAA),emissiveIntensity:1.8}));bulb.position.set(0,1.68,0);g.add(bulb);return g;}
-function buildPendant(){const g=new THREE.Group();const cord=cy(.008,.008,.7,4,MAT.metal(0x303030));cord.position.set(0,1.15,0);g.add(cord);const cap=cy(.06,.06,.04,12,MAT.metal(0xB0A080));cap.position.set(0,.8,0);g.add(cap);const shade=cy(.28,.06,.22,20,new THREE.MeshStandardMaterial({color:0x202428,roughness:.08,metalness:.12,transparent:true,opacity:.72}));shade.position.set(0,.68,0);g.add(shade);const bulb=new THREE.Mesh(new THREE.SphereGeometry(.05,12,8),new THREE.MeshStandardMaterial({color:0xFFFFCC,emissive:new THREE.Color(0xFFEEAA),emissiveIntensity:1.2}));bulb.position.set(0,.68,0);g.add(bulb);return g;}
-function buildPlant(){const g=new THREE.Group();const pot=cy(.22,.28,.42,20,MAT.fabric(0xF0EAE0));pot.position.set(0,.21,0);g.add(pot);const soil=cy(.20,.20,.03,16,new THREE.MeshStandardMaterial({color:0x2A1A0A,roughness:.98}));soil.position.set(0,.435,0);g.add(soil);const trunk=cy(.04,.05,.45,8,MAT.wood(0x4A3020));trunk.position.set(0,.66,0);g.add(trunk);const lm=new THREE.MeshStandardMaterial({color:0x2D6A2A,roughness:.82,side:THREE.DoubleSide});for(let i=0;i<9;i++){const a=i*(Math.PI*2/9);const r=.15+Math.random()*.2,h=.6+Math.random()*.6;const leaf=bx(.22+Math.random()*.12,.28+Math.random()*.1,.02,lm);leaf.position.set(Math.cos(a)*r,h,Math.sin(a)*r);leaf.rotation.set(-Math.cos(a)*.4,a,Math.sin(a)*.3);g.add(leaf);}return g;}
-function buildRugClassic(){const g=new THREE.Group();const b=bx(2.5,.02,1.8,MAT.fabric(0xC87050));b.position.set(0,.01,0);g.add(b);const inner=bx(2.1,.021,1.4,MAT.fabric(0xD48868));inner.position.set(0,.011,0);g.add(inner);return g;}
-function buildRugRound(){const g=new THREE.Group();([[1.2,0x1A3055],[1.0,0x2A4470],[.7,0x1A3055],[.4,0x2A4470],[.2,0xD4A840]] as[number,number][]).forEach(([r,col],idx)=>{const c=cy(r,r,.02+idx*.001,32,MAT.fabric(col));c.position.set(0,.01+idx*.001,0);g.add(c);});return g;}
-function buildRugRunner(){const g=new THREE.Group();const b=bx(3,.02,.8,MAT.fabric(0x6A8860));b.position.set(0,.01,0);g.add(b);const inner=bx(2.6,.021,.6,MAT.fabric(0x7A9870));inner.position.set(0,.011,0);g.add(inner);return g;}
+/* Primitive helpers */
+function bx(w:number,h:number,d:number,mat:THREE.Material,sx=2,sy=2,sz=2){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d,sx,sy,sz),mat);
+  m.castShadow=true;m.receiveShadow=true;return m;
+}
+function cy(rt:number,rb:number,h:number,seg:number,mat:THREE.Material){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat);
+  m.castShadow=true;m.receiveShadow=true;return m;
+}
+function sp(r:number,mat:THREE.Material){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,24,16),mat);
+  m.castShadow=true;m.receiveShadow=true;return m;
+}
+/* Lathe helper — profile as [[x,y], …] */
+function lt(profile:[number,number][],seg:number,mat:THREE.Material):THREE.Mesh{
+  const pts=profile.map(([x,y])=>new THREE.Vector2(x,y));
+  const m=new THREE.Mesh(new THREE.LatheGeometry(pts,seg),mat);
+  m.castShadow=true;m.receiveShadow=true;return m;
+}
+
+/* Tapered furniture leg via LatheGeometry */
+function taperedLeg(h:number,topR:number,botR:number,mat:THREE.Material):THREE.Mesh{
+  return lt([[botR,0],[botR*.8,h*.1],[topR*.9,h*.85],[topR,h]],16,mat);
+}
+
+/* ── SOFA ──────────────────────────────────────────────────── */
+function buildSofa(){
+  const g=new THREE.Group();
+  const fab=MAT.fabric(0x7A6555),cu=MAT.fabric(0x9A8068),lm=MAT.wood(0x3C2818);
+
+  // Platform base
+  const base=bx(2.3,.18,1.0,MAT.wood(0x3C2818));base.position.set(0,.09,0);g.add(base);
+  // Seat cushions × 3
+  for(let i=0;i<3;i++){
+    const s=bx(.72,.16,.82,cu);s.position.set(-0.72+i*.72,.31,.04);g.add(s);
+  }
+  // Back rail
+  const back=bx(2.3,.08,.72,MAT.wood(0x3C2818));back.position.set(0,.72,-.36);g.add(back);
+  // Back cushions × 3
+  for(let i=0;i<3;i++){
+    const bc=bx(.72,.44,.14,fab);bc.position.set(-0.72+i*.72,.54,-.30);g.add(bc);
+  }
+  // Armrests
+  const arm=bx(.16,.38,1.0,fab);arm.position.set(-1.07,.34,0);g.add(arm.clone());
+  arm.position.set(1.07,.34,0);g.add(arm);
+  // Tapered wooden legs × 4
+  for(const[x,z] of[[-1.0,-.42],[1.0,-.42],[-1.0,.42],[1.0,.42]] as[number,number][]){
+    const l=taperedLeg(.09,.025,.035,lm);l.position.set(x,0,z);g.add(l);
+  }
+  // Scatter cushion
+  const sc=bx(.28,.22,.26,MAT.fabric(0xB8A080));sc.position.set(-.95,.50,.06);sc.rotation.set(0,.3,.15);g.add(sc);
+  return g;
+}
+
+/* ── ARMCHAIR — fallback only; real model is SheenChair.glb ── */
+function buildArmchair(){
+  const g=new THREE.Group();
+  const f=MAT.fabric(0x9A7858),lm=MAT.wood(0x3A2818);
+  const base=bx(1.0,.18,.88,MAT.wood(0x3A2818));base.position.set(0,.09,0);g.add(base);
+  const seat=bx(.80,.14,.72,f);seat.position.set(0,.28,.04);g.add(seat);
+  const back=bx(.80,.56,.14,f);back.position.set(0,.56,-.36);g.add(back);
+  for(const[x] of[[-0.40],[0.40]] as[number][]){
+    const a=bx(.14,.28,.80,MAT.fabric(0x8A6848));a.position.set(x,.28,0);g.add(a);
+  }
+  for(const[x,z]of[[-.38,-.38],[.38,-.38],[-.38,.38],[.38,.38]] as[number,number][]){
+    const l=taperedLeg(.10,.02,.03,lm);l.position.set(x,0,z);g.add(l);
+  }
+  return g;
+}
+
+/* ── BENCH ─────────────────────────────────────────────────── */
+function buildBench(){
+  const g=new THREE.Group();
+  const velv=MAT.fabric(0x556B4A),mt=MAT.metal(0x6A6A6A);
+  // Seat with slight bevel
+  const seat=bx(1.7,.10,.48,velv);seat.position.set(0,.40,0);g.add(seat);
+  const trim=bx(1.62,.04,.44,MAT.wood(0x4A2E14));trim.position.set(0,.37,0);g.add(trim);
+  // Hairpin-style metal legs (two U-shapes per side)
+  for(const side of[-1,1] as number[]){
+    for(const lr of[-.25,.25] as number[]){
+      // vertical part
+      const v=cy(.015,.015,.38,8,mt);v.position.set(side*.74,.19,lr);g.add(v);
+      // angled foot
+      const f=cy(.012,.012,.18,8,mt);f.position.set(side*.74,.01,lr);f.rotation.set(.5*side,0,0);g.add(f);
+    }
+    // horizontal cross bar
+    const h=cy(.012,.012,.54,8,mt);h.position.set(side*.74,.06,0);h.rotation.set(Math.PI/2,0,0);g.add(h);
+  }
+  return g;
+}
+
+/* ── COFFEE TABLE ───────────────────────────────────────────── */
+function buildCoffeeTable(){
+  const g=new THREE.Group();
+  const tm=MAT.wood(0xC8A870),mt=MAT.metal(0x4A4A4A);
+  // Tabletop with slight thickness
+  const top=bx(1.4,.06,.78,tm);top.position.set(0,.40,0);g.add(top);
+  // Lower shelf
+  const sh=bx(1.1,.04,.58,MAT.wood(0xB89858));sh.position.set(0,.15,0);g.add(sh);
+  // Thin metal hairpin legs × 4
+  for(const[x,z] of[[-.58,-.32],[.58,-.32],[-.58,.32],[.58,.32]] as[number,number][]){
+    // angled outward slightly
+    const leg=cy(.016,.016,.38,8,mt);
+    leg.position.set(x,.19,z);
+    leg.rotation.set(z*.12,0,x*.08);
+    g.add(leg);
+  }
+  return g;
+}
+
+/* ── DINING TABLE ───────────────────────────────────────────── */
+function buildDiningTable(){
+  const g=new THREE.Group();
+  const tm=MAT.wood(0xCCB07A),lm=MAT.wood(0x4A3018);
+  // Top
+  const top=bx(2.2,.06,1.0,tm);top.position.set(0,.79,0);g.add(top);
+  // Trestle legs: two A-frame sides
+  for(const side of[-1,1] as number[]){
+    // angled outer legs
+    for(const lr of[-1,1] as number[]){
+      const l=bx(.08,.72,.08,lm);
+      l.position.set(side*.92,.36,lr*.38);
+      l.rotation.set(lr*.12,0,0);
+      g.add(l);
+    }
+    // horizontal stretcher
+    const s=bx(.08,.06,.78,lm);s.position.set(side*.92,.12,0);g.add(s);
+  }
+  // Central lower stretcher
+  const cs=bx(1.88,.06,.08,lm);cs.position.set(0,.18,0);g.add(cs);
+  return g;
+}
+
+/* ── SIDE TABLE ─────────────────────────────────────────────── */
+function buildSideTable(){
+  const g=new THREE.Group();
+  const bm=MAT.metal(0xC8A030);
+  // Marble top disk
+  const top=lt([[0,0],[.28,0],[.30,.015],[.30,.04],[0,.04]],32,MAT.marble());
+  top.position.set(0,.60,0);g.add(top);
+  // Pedestal stem with ornate lathe profile
+  const stem=lt([
+    [0,0],[.055,0],[.06,.02],[.035,.08],[.025,.28],
+    [.02,.42],[.025,.50],[.06,.52],[.055,.54],[0,.54]
+  ],24,bm);stem.position.set(0,.04,0);g.add(stem);
+  // Flared base disk
+  const base=lt([[0,0],[.18,0],[.20,.01],[.20,.025],[.17,.04],[0,.04]],32,bm);
+  base.position.set(0,.01,0);g.add(base);
+  return g;
+}
+
+/* ── BOOKCASE ───────────────────────────────────────────────── */
+function buildBookshelf(){
+  const g=new THREE.Group();
+  const fr=MAT.wood(0xDEC8A8);
+  const BOOK_COLS=[0xCC4444,0x3355AA,0x44AA55,0xCC8833,0x8833AA,0xCC4477,0x777733,0x33AACC,0x553311,0xAA6633];
+
+  // Side panels
+  const s1=bx(.05,2.0,.42,fr);s1.position.set(-.55,1.0,0);g.add(s1);
+  const s2=s1.clone();s2.position.set(.55,1.0,0);g.add(s2);
+  // Top & bottom panels
+  const topP=bx(1.15,.05,.42,fr);topP.position.set(0,1.975,0);g.add(topP);
+  const bot=bx(1.15,.05,.42,fr);bot.position.set(0,.025,0);g.add(bot);
+  // Back panel
+  const bk=bx(1.15,1.97,.025,MAT.wood(0xC8B090));bk.position.set(0,1.0,-.20);g.add(bk);
+  // Shelves × 4
+  for(let i=1;i<=4;i++){
+    const sh=bx(1.05,.04,.40,MAT.wood(0xE0CEAE));sh.position.set(0,i*.42+.025,0);g.add(sh);
+  }
+  // Books on each shelf
+  for(let shelf=0;shelf<5;shelf++){
+    const shelfY=shelf*.42+.07;
+    let xPos=-.48;
+    const count=5+Math.floor(Math.random()*5);
+    for(let b=0;b<count&&xPos<.44;b++){
+      const bw=.034+Math.random()*.042;
+      const bh=.14+Math.random()*.18;
+      const col=BOOK_COLS[b%BOOK_COLS.length];
+      const book=bx(bw,bh,.34,new THREE.MeshStandardMaterial({color:col,roughness:.78,metalness:.02}));
+      book.position.set(xPos+bw/2,shelfY+bh/2,0);
+      // occasional slight lean
+      book.rotation.z=(Math.random()-.5)*.08;
+      g.add(book);
+      xPos+=bw+.003;
+    }
+  }
+  return g;
+}
+
+/* ── SIDEBOARD / CABINET ────────────────────────────────────── */
+function buildCabinet(){
+  const g=new THREE.Group();
+  const body=MAT.wood(0xE0D0B8),door=MAT.wood(0xD0C0A8),brass=MAT.metal(0xB09840);
+
+  // Main body
+  const bl=bx(1.7,.72,.52,body);bl.position.set(0,.36,0);g.add(bl);
+  // Top surface (slightly darker)
+  const top=bx(1.72,.03,.54,MAT.wood(0xC8B898));top.position.set(0,.735,0);g.add(top);
+  // Three doors with inset panel detail
+  for(let i=0;i<3;i++){
+    const x=-0.565+i*.565;
+    const d=bx(.52,.66,.03,door);d.position.set(x,.36,.27);g.add(d);
+    // Inset panel
+    const panel=bx(.40,.52,.015,MAT.wood(0xC8B894));panel.position.set(x,.36,.275);g.add(panel);
+    // Brass knob using LatheGeometry
+    const knob=lt([[0,0],[.018,0],[.022,.006],[.022,.018],[.018,.024],[.01,.028],[0,.028]],16,brass);
+    knob.position.set(x,.36,.30);knob.rotation.x=Math.PI/2;g.add(knob);
+  }
+  // Tapered legs × 4
+  for(const[x,z]of[[-.77,-.19],[.77,-.19],[-.77,.19],[.77,.19]] as[number,number][]){
+    const l=taperedLeg(.10,.018,.030,brass);l.position.set(x,0,z);g.add(l);
+  }
+  return g;
+}
+
+/* ── FLOOR LAMP — fallback only; real = IridescenceLamp.glb ── */
+function buildFloorLamp(){
+  const g=new THREE.Group();
+  const brass=MAT.metal(0xC8B030);
+  // Marble base using lathe
+  const base=lt([[0,0],[.22,0],[.24,.02],[.24,.05],[.20,.06],[0,.06]],28,MAT.marble());
+  base.position.set(0,0,0);g.add(base);
+  // Tapered stem
+  const stem=lt([[.018,0],[.016,.4],[.014,.9],[.012,1.4],[.010,1.62]],12,brass);
+  stem.position.set(0,.06,0);g.add(stem);
+  // Articulated joint sphere
+  const joint=sp(.038,brass);joint.position.set(0,1.68,0);g.add(joint);
+  // Shade
+  const shade=cy(.30,.18,.28,28,MAT.fabric(0xFFF8E8));shade.position.set(0,1.78,0);g.add(shade);
+  // Emissive bulb
+  const bulb=new THREE.Mesh(new THREE.SphereGeometry(.055,16,12),new THREE.MeshStandardMaterial({color:0xFFFFDD,emissive:new THREE.Color(0xFFEEAA),emissiveIntensity:2.0}));
+  bulb.position.set(0,1.75,0);g.add(bulb);
+  return g;
+}
+
+/* ── PENDANT — fallback; real = IridescenceLamp.glb ─────────── */
+function buildPendant(){
+  const g=new THREE.Group();
+  const mt=MAT.metal(0xB0A060);
+  const cord=cy(.007,.007,.65,6,MAT.metal(0x282828));cord.position.set(0,.97,0);g.add(cord);
+  const cap=lt([[0,0],[.055,0],[.065,.02],[.060,.045],[0,.045]],16,mt);cap.position.set(0,.65,0);g.add(cap);
+  // Flared smoked glass shade
+  const shade=lt([[.04,.0],[.12,.06],[.24,.12],[.30,.20],[.30,.24],[.02,.24]],24,
+    new THREE.MeshStandardMaterial({color:0x181C20,roughness:.06,metalness:.15,transparent:true,opacity:.75}));
+  shade.position.set(0,.42,0);g.add(shade);
+  const bulb=new THREE.Mesh(new THREE.SphereGeometry(.04,12,8),new THREE.MeshStandardMaterial({color:0xFFFFCC,emissive:new THREE.Color(0xFFEEAA),emissiveIntensity:1.4}));
+  bulb.position.set(0,.50,0);g.add(bulb);
+  return g;
+}
+
+/* ── PLANT — fallback; real = GlassVaseFlowers.glb ─────────── */
+function buildPlant(){
+  const g=new THREE.Group();
+  // Ceramic pot with lathe profile
+  const pot=lt([
+    [0,0],[.18,0],[.22,.04],[.24,.10],[.24,.20],[.22,.36],
+    [.20,.40],[.18,.42],[.20,.43],[.20,.44],[0,.44]
+  ],24,new THREE.MeshStandardMaterial({color:0xEEE0D2,roughness:.75,metalness:.0}));
+  pot.position.set(0,0,0);g.add(pot);
+  // Soil disk
+  const soil=cy(.17,.17,.02,20,new THREE.MeshStandardMaterial({color:0x261408,roughness:.98}));
+  soil.position.set(0,.44,0);g.add(soil);
+  // Trunk
+  const trunk=cy(.028,.036,.52,10,MAT.wood(0x3A2012));trunk.position.set(0,.66,0);g.add(trunk);
+  // Leaves — wider with more variety
+  const lm=new THREE.MeshStandardMaterial({color:0x256E22,roughness:.80,side:THREE.DoubleSide});
+  for(let i=0;i<12;i++){
+    const a=i*(Math.PI*2/12)+Math.random()*.3;
+    const r=.12+Math.random()*.22,h=.72+Math.random()*.70;
+    const leaf=bx(.26+Math.random()*.14,.32+Math.random()*.12,.018,lm);
+    leaf.position.set(Math.cos(a)*r,h,Math.sin(a)*r);
+    leaf.rotation.set(-Math.cos(a)*.5,a,Math.sin(a)*.35);
+    g.add(leaf);
+  }
+  return g;
+}
+
+/* ── RUGS ───────────────────────────────────────────────────── */
+function buildRugClassic(){
+  const g=new THREE.Group();
+  // Main field
+  const b=bx(2.5,.022,1.8,MAT.fabric(0xB86040));b.position.set(0,.011,0);g.add(b);
+  // Border stripe
+  const border=bx(2.3,.023,1.6,MAT.fabric(0xC87252));border.position.set(0,.012,0);g.add(border);
+  // Inner field
+  const inner=bx(2.0,.024,1.3,MAT.fabric(0xA84E34));inner.position.set(0,.013,0);g.add(inner);
+  // Fringe lines (simplified)
+  for(let i=0;i<10;i++){
+    const f=cy(.008,.008,.06,4,MAT.fabric(0xE0C8A0));
+    f.position.set(-1.18+i*.24,.04,-.92);f.rotation.x=Math.PI/2;g.add(f);
+    const f2=f.clone();f2.position.set(-1.18+i*.24,.04,.92);g.add(f2);
+  }
+  return g;
+}
+
+function buildRugRound(){
+  const g=new THREE.Group();
+  const rings:[number,number][]=[
+    [1.20,0x1A3055],[1.0,0x2A4470],[.78,0x1E3860],
+    [.56,0x2A4470],[.36,0x1A3055],[.18,0xD4A830]
+  ];
+  rings.forEach(([r,col],i)=>{
+    const c=cy(r,r,.022+i*.001,36,MAT.fabric(col));
+    c.position.set(0,.011+i*.001,0);g.add(c);
+  });
+  return g;
+}
+
+function buildRugRunner(){
+  const g=new THREE.Group();
+  const b=bx(3.0,.022,.82,MAT.fabric(0x5A7852));b.position.set(0,.011,0);g.add(b);
+  const stripe=bx(2.8,.023,.62,MAT.fabric(0x6A8860));stripe.position.set(0,.012,0);g.add(stripe);
+  // Geometric diamond pattern (simplified)
+  for(let i=0;i<6;i++){
+    const d=bx(.16,.024,.16,MAT.fabric(0xC8B870));
+    d.position.set(-1.2+i*.46,.013,0);d.rotation.y=Math.PI/4;g.add(d);
+  }
+  return g;
+}
 
 export function buildFurniture(type: string): THREE.Group | null {
   const map: Record<string, () => THREE.Group> = {
@@ -159,18 +462,26 @@ export function buildFurniture(type: string): THREE.Group | null {
 
 /* ══════════════════════════════════════════════════════════════
    GLB URL REGISTRY
-   - Real model: armchair → /models/chair.glb (Khronos SheenChair PBR)
-   - All others: procedural geometry → GLTFExporter → blob URL
-   Preload the real model so it's cached before any component mounts.
+   Real models (downloaded to /public/models/):
+     armchair  → SheenChair.glb   (Khronos, full PBR)
+     floorlamp → IridescenceLamp.glb (Khronos, iridescent glass)
+     pendant   → IridescenceLamp.glb (same lamp asset)
+     plant     → GlassVaseFlowers.glb (Khronos, glass+flowers)
+   Everything else: procedural geometry → GLTFExporter → blob URL
 ══════════════════════════════════════════════════════════════ */
 const REAL_MODELS: Record<string, string> = {
-  armchair: "/models/chair.glb",
+  armchair:  "/models/chair.glb",
+  floorlamp: "/models/lamp.glb",
+  pendant:   "/models/lamp.glb",
+  plant:     "/models/plant.glb",
 };
 
 const urlRegistry = new Map<string, string>();
 
-// Kick off the real-model fetch immediately at module load
+// Preload all real models at module load so they are cached early
 useGLTF.preload("/models/chair.glb");
+useGLTF.preload("/models/lamp.glb");
+useGLTF.preload("/models/plant.glb");
 
 function exportGroupToGLB(group: THREE.Group): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -214,10 +525,12 @@ interface DragActive {
 /* Shared drag-plane (Y=0 ground plane) — constant, defined once */
 const DRAG_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
-/* Model height offsets for correct floor placement after useGLTF */
+/* Model height offsets — real GLBs may need Y adjustment */
 const Y_OFFSET: Record<string, number> = {
-  armchair: 0,   // SheenChair sits on the ground correctly
-  pendant: 2.5,  // hangs from ceiling
+  armchair:  0,    // SheenChair origin = ground plane
+  floorlamp: 0,    // IridescenceLamp origin = ground plane
+  pendant:   2.2,  // IridescenceLamp reused as hanging pendant
+  plant:     0,    // GlassVaseFlowers origin = ground plane
 };
 
 /* ══════════════════════════════════════════════════════════════
