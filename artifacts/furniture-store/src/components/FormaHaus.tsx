@@ -872,18 +872,19 @@ export default function FormaHaus() {
   const [selId, setSelId]                 = useState("");
   const [selLabel, setSelLabel]           = useState("");
   const [selPrice, setSelPrice]           = useState(0);
-  const [tab, setTab]                     = useState<"furniture" | "materials">("furniture");
+  const [tab, setTab]                     = useState<"furniture" | "materials" | "summary">("furniture");
   const [openCats, setOpenCats]           = useState<Set<string>>(new Set(["seating"]));
-  const [floorKind, setFloorKindSt]       = useState("oak");
-  const [wallHex, setWallHexSt]           = useState("#F5F0EA");
-  const [wallColorId, setWallColorIdSt]   = useState("white");
+  /* floor/wall: ID-based, derive hex from WALL_COLORS lookup */
+  const [floorKind, setFloorKindRaw]      = useState("oak");
+  const [wallColorId, setWallColorIdRaw]  = useState("white");
+  const wallHex = WALL_COLORS.find(w => w.id === wallColorId)?.hex ?? "#F5F0EA";
   const [thumbs, setThumbs]               = useState<Record<string, string>>({});
 
   const webglOk     = useMemo(() => checkWebGL(), []);
   const controlsRef = useRef<{ enabled: boolean } | null>(null);
   const dragActive  = useRef<DragActive | null>(null);
 
-  /* Build all GLB blob URLs before the Canvas renders */
+  /* Build thumbnails + model registry */
   useEffect(() => {
     if (webglOk) {
       const map: Record<string, string> = {};
@@ -893,22 +894,35 @@ export default function FormaHaus() {
         .then(() => setRegistryReady(true))
         .catch(err => { console.warn("Model registry:", err); setRegistryReady(true); });
     } else {
-      setRegistryReady(true); // show fallback message immediately
+      setRegistryReady(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* Wrap floor/wall setters to keep cart in sync */
-  const setFloorKind = useCallback((k: string) => {
-    setFloorKindSt(k);
+  /* Auto-add product from URL ?add=productId (linked from catalog) */
+  useEffect(() => {
+    if (!registryReady) return;
+    const params = new URLSearchParams(window.location.search);
+    const addId = params.get("add");
+    if (!addId) return;
+    const prod = ITEMS.find(i => i.type === addId);
+    if (prod) addFurniture(prod.type, prod.label, prod.price, prod.icon);
+    // Remove param from URL without reloading
+    const url = new URL(window.location.href);
+    url.searchParams.delete("add");
+    window.history.replaceState({}, "", url.toString());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registryReady]);
+
+  /* Floor / wall change — update local state + cart context */
+  const changeFloor = useCallback((k: string) => {
+    setFloorKindRaw(k);
     cart.setFloorKind(k);
   }, [cart]);
 
-  const setWallHex = useCallback((hex: string) => {
-    setWallHexSt(hex);
-    // Find the wall color id from hex
-    const wc = WALL_COLORS.find(w => w.hex === hex);
-    if (wc) { setWallColorIdSt(wc.id); cart.setWallColorId(wc.id); }
+  const changeWall = useCallback((id: string) => {
+    setWallColorIdRaw(id);
+    cart.setWallColorId(id);
   }, [cart]);
 
   const addFurniture = useCallback((type: string, label: string, price: number, icon = "") => {
@@ -965,61 +979,81 @@ export default function FormaHaus() {
 
   const fmt = (p: number) => p.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
 
+  /* Derived pricing for Summary tab */
+  const floorMat  = FLOOR_OPTIONS.find(f => f.id === floorKind);
+  const wallColor = WALL_COLORS.find(w => w.id === wallColorId);
+  const ROOM_AREA = 81; // 9×9 m
+  const FLOOR_PRICE_M2: Record<string,number> = { oak:45, walnut:68, marble:120, concrete:35 };
+  const WALL_PRICE:     Record<string,number> = { white:280, sage:340, sand:340, clay:380, navy:420, char:400 };
+  const floorCost  = ROOM_AREA * (FLOOR_PRICE_M2[floorKind] ?? 45);
+  const wallCost   = WALL_PRICE[wallColorId] ?? 280;
+  const grandTotal = total + floorCost + wallCost;
+
   return (
-    <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column", fontFamily: "'Inter',system-ui,sans-serif", background: "#F0EBE4", color: "#1A1A1A" }}>
+    <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column", fontFamily: "'Inter',system-ui,sans-serif", background: "#1A1A1A", color: "#1A1A1A" }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
       {/* ── HEADER ── */}
-      <header style={{ height: 56, background: "#1A1A1A", display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0, zIndex: 200 }}>
+      <header style={{ height: 56, background: "#1A1A1A", display: "flex", alignItems: "center", padding: "0 20px", gap: 14, flexShrink: 0, zIndex: 200, borderBottom: "1px solid rgba(255,255,255,.08)" }}>
         <Link href="/">
           <div style={{ display: "flex", alignItems: "baseline", gap: 4, cursor: "pointer" }}>
-            <span style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: 4, color: "#fff" }}>FORMA</span>
-            <span style={{ fontSize: "1.15rem", fontWeight: 300, letterSpacing: 4, color: "#C8A870" }}>HAUS</span>
+            <span style={{ fontSize: "1.05rem", fontWeight: 800, letterSpacing: 4, color: "#fff" }}>FORMA</span>
+            <span style={{ fontSize: "1.05rem", fontWeight: 300, letterSpacing: 4, color: "#C8A870" }}>HAUS</span>
           </div>
         </Link>
-        <div style={{ flex: 1, fontSize: ".7rem", color: "rgba(255,255,255,.4)", textAlign: "center", letterSpacing: .5 }}>3D INTERIOR DESIGNER</div>
+        <div style={{ fontSize: ".65rem", color: "rgba(255,255,255,.3)", letterSpacing: 2, textTransform: "uppercase" }}>3D Designer</div>
+        <div style={{ flex: 1 }} />
 
-        {/* Cart icon with badge */}
+        {/* Grand total chip */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,.07)", border: "1px solid rgba(255,255,255,.1)", borderRadius: 10, padding: "6px 14px" }}>
+          <div>
+            <div style={{ fontSize: ".55rem", fontWeight: 700, letterSpacing: 1.5, color: "rgba(255,255,255,.4)", textTransform: "uppercase" }}>Проєкт</div>
+            <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#C8A870", lineHeight: 1 }}>{fmt(grandTotal)}</div>
+          </div>
+          <div style={{ width: 1, height: 28, background: "rgba(255,255,255,.1)" }} />
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#fff", lineHeight: 1 }}>{items.length}</div>
+            <div style={{ fontSize: ".55rem", color: "rgba(255,255,255,.4)", letterSpacing: .8, textTransform: "uppercase" }}>Меблів</div>
+          </div>
+          <button onClick={clearRoom} style={{ padding: "5px 11px", borderRadius: 7, border: "1px solid rgba(255,255,255,.12)", background: "rgba(255,255,255,.05)", color: "rgba(255,255,255,.6)", fontSize: ".68rem", fontWeight: 600, cursor: "pointer" }}>Очистити</button>
+        </div>
+
+        {/* Cart button */}
         <Link href="/cart">
-          <div style={{ position: "relative", cursor: "pointer", padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,.18)", background: "rgba(255,255,255,.07)", display: "flex", alignItems: "center", gap: 8, color: "#fff" }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div style={{ position: "relative", cursor: "pointer", padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,.15)", background: "#2563EB", display: "flex", alignItems: "center", gap: 7, color: "#fff" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
               <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
             </svg>
-            <span style={{ fontSize: ".72rem", fontWeight: 600 }}>Кошик</span>
+            <span style={{ fontSize: ".72rem", fontWeight: 700 }}>Кошик</span>
             {cart.itemCount > 0 && (
-              <span style={{ position: "absolute", top: -6, right: -6, background: "#2563EB", color: "#fff", fontSize: ".6rem", fontWeight: 800, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+              <span style={{ position: "absolute", top: -7, right: -7, background: "#fff", color: "#2563EB", fontSize: ".58rem", fontWeight: 900, borderRadius: "50%", width: 17, height: 17, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {cart.itemCount}
               </span>
             )}
           </div>
         </Link>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 14, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 12, padding: "8px 18px" }}>
-          <div>
-            <div style={{ fontSize: ".58rem", fontWeight: 700, letterSpacing: 1.5, color: "rgba(255,255,255,.45)", textTransform: "uppercase", marginBottom: 1 }}>Project Total</div>
-            <div style={{ fontSize: "1.3rem", fontWeight: 800, color: "#C8A870", lineHeight: 1 }}>{fmt(total)}</div>
-          </div>
-          <div style={{ width: 1, height: 32, background: "rgba(255,255,255,.12)" }} />
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "1.4rem", fontWeight: 800, color: "#fff", lineHeight: 1 }}>{items.length}</div>
-            <div style={{ fontSize: ".6rem", color: "rgba(255,255,255,.4)", letterSpacing: .8, textTransform: "uppercase" }}>Items</div>
-          </div>
-          <button onClick={clearRoom} style={{ marginLeft: 4, padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,.15)", background: "rgba(255,255,255,.06)", color: "rgba(255,255,255,.7)", fontSize: ".72rem", fontWeight: 600, cursor: "pointer" }}>Clear</button>
-        </div>
       </header>
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
-        {/* ── SIDEBAR ── */}
-        <aside style={{ width: 300, background: "#fff", borderRight: "1px solid #EAE4DC", display: "flex", flexDirection: "column", flexShrink: 0, zIndex: 100 }}>
-          <div style={{ display: "flex", background: "#F8F5F0", borderBottom: "1px solid #EAE4DC", flexShrink: 0 }}>
-            {(["furniture", "materials"] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)} style={{ flex: 1, height: 46, border: "none", background: "none", cursor: "pointer", fontSize: ".78rem", fontWeight: 700, letterSpacing: .5, textTransform: "uppercase", color: tab === t ? "#1A1A1A" : "#999", borderBottom: tab === t ? "2px solid #1A1A1A" : "2px solid transparent", transition: "all .18s" }}>
-                {t === "furniture" ? "Furniture" : "Materials"}
+        {/* ── SIDEBAR (white) ── */}
+        <aside style={{ width: 296, background: "#fff", borderRight: "none", display: "flex", flexDirection: "column", flexShrink: 0, zIndex: 100, boxShadow: "2px 0 12px rgba(0,0,0,.18)" }}>
+
+          {/* Tabs */}
+          <div style={{ display: "flex", background: "#F8F6F2", borderBottom: "1px solid #EAE4DC", flexShrink: 0 }}>
+            {([
+              { id: "furniture", label: "Меблі" },
+              { id: "materials", label: "Матеріали" },
+              { id: "summary",   label: "Кошторис" },
+            ] as const).map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, height: 44, border: "none", background: "none", cursor: "pointer", fontSize: ".7rem", fontWeight: 700, letterSpacing: .3, textTransform: "uppercase", color: tab === t.id ? "#1A1A1A" : "#AAA", borderBottom: tab === t.id ? "2px solid #1A1A1A" : "2px solid transparent", transition: "all .18s" }}>
+                {t.label}
               </button>
             ))}
           </div>
 
+          {/* ── Furniture tab ── */}
           {tab === "furniture" && (
             <div style={{ flex: 1, overflowY: "auto" }}>
               {CATS.map(cat => {
@@ -1028,16 +1062,16 @@ export default function FormaHaus() {
                 return (
                   <div key={cat.id} style={{ borderBottom: "1px solid #F0ECE6" }}>
                     <button onClick={() => setOpenCats(p => { const n = new Set(p); n.has(cat.id) ? n.delete(cat.id) : n.add(cat.id); return n; })}
-                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "13px 18px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>
-                      <span style={{ fontSize: "1rem" }}>{cat.icon}</span>
-                      <span style={{ flex: 1, fontSize: ".82rem", fontWeight: 700, color: "#1A1A1A" }}>{cat.label}</span>
-                      <span style={{ fontSize: ".75rem", color: "#999", transform: isOpen ? "rotate(90deg)" : "none", transition: "transform .2s" }}>›</span>
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}>
+                      <span style={{ fontSize: ".95rem" }}>{cat.icon}</span>
+                      <span style={{ flex: 1, fontSize: ".8rem", fontWeight: 700, color: "#1A1A1A" }}>{cat.label}</span>
+                      <span style={{ fontSize: ".75rem", color: "#BBB", transform: isOpen ? "rotate(90deg)" : "none", transition: "transform .2s" }}>›</span>
                     </button>
                     {isOpen && (
-                      <div style={{ padding: "0 12px 12px" }}>
+                      <div style={{ padding: "0 10px 10px" }}>
                         {catItems.map(item => (
                           <CatalogCard key={item.type} item={item} thumb={thumbs[item.type]}
-                            onAdd={() => addFurniture(item.type, item.label, item.price)} fmt={fmt}
+                            onAdd={() => addFurniture(item.type, item.label, item.price, item.icon)} fmt={fmt}
                             loading={!registryReady}
                           />
                         ))}
@@ -1049,37 +1083,41 @@ export default function FormaHaus() {
             </div>
           )}
 
+          {/* ── Materials tab ── */}
           {tab === "materials" && (
-            <div style={{ flex: 1, overflowY: "auto", padding: "18px 16px" }}>
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: ".65rem", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#999", marginBottom: 12 }}>Floor Material</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px" }}>
+              {/* Floor */}
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ fontSize: ".62rem", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#AAA", marginBottom: 10 }}>Підлога</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                   {FLOOR_OPTIONS.map(fo => {
-                    const sel = floorKindSt === fo.id;
+                    const sel = floorKind === fo.id;
                     return (
-                      <button key={fo.id} onClick={() => setFloorKind(fo.id)}
-                        style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${sel ? "#1A1A1A" : "#EAE4DC"}`, background: sel ? "#1A1A1A" : "transparent", cursor: "pointer", textAlign: "left", transition: "all .15s" }}>
+                      <button key={fo.id} onClick={() => changeFloor(fo.id)}
+                        style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 11px", borderRadius: 10, border: `1.5px solid ${sel ? "#1A1A1A" : "#EAE4DC"}`, background: sel ? "#1A1A1A" : "transparent", cursor: "pointer", textAlign: "left", transition: "all .15s" }}>
                         <FloorSwatch kind={fo.id} />
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: ".8rem", fontWeight: 600, color: sel ? "#fff" : "#1A1A1A" }}>{fo.label}</div>
-                          <div style={{ fontSize: ".68rem", color: sel ? "rgba(255,255,255,.55)" : "#999", marginTop: 1 }}>{fo.sub}</div>
+                          <div style={{ fontSize: ".78rem", fontWeight: 600, color: sel ? "#fff" : "#1A1A1A" }}>{fo.label}</div>
+                          <div style={{ fontSize: ".63rem", color: sel ? "rgba(255,255,255,.5)" : "#999", marginTop: 1 }}>{fo.sub}</div>
                         </div>
-                        {sel && <span style={{ color: "#C8A870" }}>✓</span>}
+                        {sel && <span style={{ color: "#C8A870", fontSize: ".8rem" }}>✓</span>}
                       </button>
                     );
                   })}
                 </div>
               </div>
+
+              {/* Wall */}
               <div>
-                <div style={{ fontSize: ".65rem", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#999", marginBottom: 12 }}>Wall Colour</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+                <div style={{ fontSize: ".62rem", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#AAA", marginBottom: 10 }}>Колір стін</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 7 }}>
                   {WALL_COLORS.map(wc => {
-                    const sel = wallHexSt === wc.hex;
+                    const sel = wallColorId === wc.id;
                     return (
-                      <button key={wc.id} onClick={() => setWallHex(wc.hex)}
-                        style={{ padding: "10px 6px", borderRadius: 10, border: `1.5px solid ${sel ? "#1A1A1A" : "#EAE4DC"}`, background: "transparent", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, transition: "all .15s" }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 8, background: wc.hex, border: "1px solid rgba(0,0,0,.08)", boxShadow: sel ? "0 0 0 2px #1A1A1A" : "none" }} />
-                        <span style={{ fontSize: ".62rem", fontWeight: 600, color: "#555", lineHeight: 1.2, textAlign: "center" }}>{wc.label}</span>
+                      <button key={wc.id} onClick={() => changeWall(wc.id)}
+                        style={{ padding: "9px 5px", borderRadius: 10, border: `1.5px solid ${sel ? "#1A1A1A" : "#EAE4DC"}`, background: "transparent", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, transition: "all .15s" }}>
+                        <div style={{ width: 34, height: 34, borderRadius: 7, background: wc.hex, border: "1px solid rgba(0,0,0,.08)", boxShadow: sel ? "0 0 0 2px #1A1A1A" : "none" }} />
+                        <span style={{ fontSize: ".58rem", fontWeight: 600, color: "#555", lineHeight: 1.2, textAlign: "center" }}>{wc.label}</span>
                       </button>
                     );
                   })}
@@ -1087,15 +1125,99 @@ export default function FormaHaus() {
               </div>
             </div>
           )}
+
+          {/* ── Summary tab ── */}
+          {tab === "summary" && (
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+              <div style={{ flex: 1, padding: "14px" }}>
+
+                {/* Furniture list */}
+                {items.length > 0 ? (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: ".6rem", fontWeight: 700, letterSpacing: 1.8, textTransform: "uppercase", color: "#AAA", marginBottom: 8 }}>Меблі та декор</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                      {items.map(it => (
+                        <div key={it.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 8px", borderRadius: 8, background: "#F9F7F4" }}>
+                          <span style={{ fontSize: ".9rem" }}>{ITEMS.find(i=>i.type===it.type)?.icon ?? "🛋️"}</span>
+                          <span style={{ flex: 1, fontSize: ".74rem", fontWeight: 600, color: "#333" }}>{it.label}</span>
+                          <span style={{ fontSize: ".74rem", fontWeight: 700, color: "#1A1A1A" }}>{fmt(it.price)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px 0", fontSize: ".72rem", color: "#888" }}>
+                      <span>Підсумок меблів</span>
+                      <span style={{ fontWeight: 700, color: "#1A1A1A" }}>{fmt(total)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: "center", padding: "24px 8px", color: "#BBB", fontSize: ".78rem" }}>
+                    Додайте меблі з вкладки «Меблі»
+                  </div>
+                )}
+
+                {/* Floor line item */}
+                <div style={{ marginBottom: 10, padding: "10px 10px", background: "#F5F2EE", borderRadius: 10, border: "1px solid #EAE4DC" }}>
+                  <div style={{ fontSize: ".6rem", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>🪵 Підлога</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                    <div>
+                      <div style={{ fontSize: ".76rem", fontWeight: 600, color: "#333" }}>{floorMat?.label ?? floorKind}</div>
+                      <div style={{ fontSize: ".62rem", color: "#999", marginTop: 1 }}>{ROOM_AREA} м² × {fmt(FLOOR_PRICE_M2[floorKind] ?? 45)}/м²</div>
+                    </div>
+                    <div style={{ fontSize: ".86rem", fontWeight: 800, color: "#1A1A1A" }}>{fmt(floorCost)}</div>
+                  </div>
+                </div>
+
+                {/* Wall line item */}
+                <div style={{ marginBottom: 16, padding: "10px 10px", background: "#F5F2EE", borderRadius: 10, border: "1px solid #EAE4DC" }}>
+                  <div style={{ fontSize: ".6rem", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", color: "#AAA", marginBottom: 4 }}>🎨 Стіни</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                    <div>
+                      <div style={{ fontSize: ".76rem", fontWeight: 600, color: "#333" }}>{wallColor?.label ?? wallColorId}</div>
+                      <div style={{ fontSize: ".62rem", color: "#999", marginTop: 1 }}>Фарбування 3 стін, ~121 м²</div>
+                    </div>
+                    <div style={{ fontSize: ".86rem", fontWeight: 800, color: "#1A1A1A" }}>{fmt(wallCost)}</div>
+                  </div>
+                </div>
+
+                {/* Grand total */}
+                <div style={{ borderTop: "1.5px solid #EAE4DC", paddingTop: 12, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: ".72rem", color: "#888" }}>
+                    <span>Меблі ({items.length} шт.)</span><span style={{ fontWeight: 600 }}>{fmt(total)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: ".72rem", color: "#888" }}>
+                    <span>Підлога</span><span style={{ fontWeight: 600 }}>{fmt(floorCost)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: ".72rem", color: "#888" }}>
+                    <span>Стіни</span><span style={{ fontWeight: 600 }}>{fmt(wallCost)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".9rem", fontWeight: 900, color: "#1A1A1A" }}>
+                    <span>Разом</span>
+                    <span style={{ color: "#2563EB", fontSize: "1.05rem" }}>{fmt(grandTotal)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order button */}
+              <div style={{ padding: "0 14px 14px", flexShrink: 0 }}>
+                <Link href="/cart">
+                  <button style={{ width: "100%", height: 44, background: "#2563EB", color: "#fff", border: "none", borderRadius: 11, fontSize: ".8rem", fontWeight: 800, cursor: "pointer", letterSpacing: .5, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                    🛒 Замовити проєкт
+                  </button>
+                </Link>
+                <button onClick={clearRoom} style={{ width: "100%", marginTop: 7, height: 36, background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: 9, fontSize: ".72rem", fontWeight: 700, cursor: "pointer" }}>
+                  Очистити кімнату
+                </button>
+              </div>
+            </div>
+          )}
         </aside>
 
-        {/* ── 3D CANVAS ── */}
-        <div style={{ flex: 1, position: "relative" }}>
+        {/* ── 3D CANVAS (dark) ── */}
+        <div style={{ flex: 1, position: "relative", background: "#1A1A1A" }}>
           {!registryReady && (
-            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#EDE8E0", zIndex: 10, gap: 14 }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#1A1A1A", zIndex: 10, gap: 14 }}>
               <div style={{ width: 40, height: 40, border: "3px solid #C8A870", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.9s linear infinite" }} />
-              <div style={{ fontSize: ".8rem", color: "#888", letterSpacing: .5 }}>Preparing 3D models…</div>
-              <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+              <div style={{ fontSize: ".8rem", color: "#666", letterSpacing: .5 }}>Завантаження 3D-моделей…</div>
             </div>
           )}
 
@@ -1109,8 +1231,8 @@ export default function FormaHaus() {
             >
               <SceneContent
                 items={items}
-                floorKind={floorKindSt}
-                wallHex={wallHexSt}
+                floorKind={floorKind}
+                wallHex={wallHex}
                 selId={selId}
                 onSelect={onSelect}
                 onDeselect={onDeselect}
@@ -1120,27 +1242,28 @@ export default function FormaHaus() {
               />
             </Canvas>
           )}
+
           {registryReady && !webglOk && (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 10, color: "#aaa" }}>
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 10, color: "#666" }}>
               <div style={{ fontSize: "2.5rem" }}>🖥️</div>
-              <div style={{ fontSize: ".9rem" }}>3D view requires WebGL — please open in a WebGL-capable browser</div>
+              <div style={{ fontSize: ".9rem" }}>3D потребує WebGL — відкрийте у сучасному браузері</div>
             </div>
           )}
 
-          <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", background: "rgba(26,26,26,.72)", backdropFilter: "blur(12px)", borderRadius: 20, padding: "5px 16px", fontSize: ".68rem", color: "rgba(255,255,255,.7)", pointerEvents: "none", letterSpacing: .3 }}>
-            Orbit · Scroll to zoom · Click + drag to move items
+          <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,.65)", backdropFilter: "blur(12px)", borderRadius: 20, padding: "5px 16px", fontSize: ".66rem", color: "rgba(255,255,255,.6)", pointerEvents: "none", letterSpacing: .3 }}>
+            Орбіта · Прокрутка = зум · Перетягуйте меблі
           </div>
 
           {selId && (
-            <div style={{ position: "absolute", bottom: 16, right: 16, background: "rgba(255,255,255,.96)", backdropFilter: "blur(16px)", border: "1px solid #EAE4DC", borderRadius: 14, padding: "16px 18px", minWidth: 190, boxShadow: "0 8px 32px rgba(0,0,0,.12)" }}>
-              <div style={{ fontSize: ".65rem", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", color: "#999", marginBottom: 4 }}>Selected</div>
-              <div style={{ fontSize: ".9rem", fontWeight: 700, marginBottom: 2 }}>{selLabel}</div>
-              <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#C8A870", marginBottom: 12 }}>{fmt(selPrice)}</div>
-              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                <button onClick={() => rotateSelected(-1)} style={rotBtnSt}>↺ Rotate</button>
-                <button onClick={() => rotateSelected(1)}  style={rotBtnSt}>↻ Rotate</button>
+            <div style={{ position: "absolute", bottom: 16, right: 16, background: "rgba(255,255,255,.97)", backdropFilter: "blur(20px)", border: "1px solid #EAE4DC", borderRadius: 14, padding: "15px 16px", minWidth: 185, boxShadow: "0 10px 36px rgba(0,0,0,.22)" }}>
+              <div style={{ fontSize: ".6rem", fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", color: "#AAA", marginBottom: 3 }}>Вибрано</div>
+              <div style={{ fontSize: ".88rem", fontWeight: 700, marginBottom: 1, color: "#1A1A1A" }}>{selLabel}</div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#C8A870", marginBottom: 11 }}>{fmt(selPrice)}</div>
+              <div style={{ display: "flex", gap: 5, marginBottom: 7 }}>
+                <button onClick={() => rotateSelected(-1)} style={rotBtnSt}>↺ Повернути</button>
+                <button onClick={() => rotateSelected(1)}  style={rotBtnSt}>↻ Повернути</button>
               </div>
-              <button onClick={removeSelected} style={{ width: "100%", padding: "7px 0", background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", borderRadius: 8, fontSize: ".73rem", fontWeight: 700, cursor: "pointer" }}>Remove Item</button>
+              <button onClick={removeSelected} style={{ width: "100%", padding: "6px 0", background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", borderRadius: 7, fontSize: ".7rem", fontWeight: 700, cursor: "pointer" }}>Видалити</button>
             </div>
           )}
         </div>

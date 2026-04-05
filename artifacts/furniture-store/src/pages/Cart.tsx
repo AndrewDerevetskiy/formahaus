@@ -4,7 +4,7 @@ import {
   ShoppingCart, Trash2, ArrowLeft, Box, ChevronRight,
   CheckCircle2, Package, Paintbrush, Layers,
 } from "lucide-react";
-import { useCart, FLOOR_PRICES, WALL_PRICES, ROOM_AREA_M2 } from "../context/CartContext";
+import { useCart, FLOOR_MATERIALS, WALL_COLORS, ROOM_AREA_M2 } from "../context/CartContext";
 
 /* ─── format ─────────────────────────────────────────────── */
 const fmt = (n: number) =>
@@ -87,8 +87,8 @@ function CheckoutModal({ onClose }: { onClose: () => void }) {
             <div className="bg-gray-50 rounded-xl p-4">
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="font-semibold text-gray-800 text-sm">{FLOOR_PRICES[floorKind]?.label}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{ROOM_AREA_M2} м² × {fmt(FLOOR_PRICES[floorKind]?.pricePerM2)}/м²</div>
+                  <div className="font-semibold text-gray-800 text-sm">{FLOOR_MATERIALS.find(f=>f.id===floorKind)?.label}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">{ROOM_AREA_M2} м² × {fmt(FLOOR_MATERIALS.find(f=>f.id===floorKind)?.pricePerM2 ?? 0)}/м²</div>
                 </div>
                 <div className="font-bold text-gray-900">{fmt(floorTotal)}</div>
               </div>
@@ -102,7 +102,7 @@ function CheckoutModal({ onClose }: { onClose: () => void }) {
             </div>
             <div className="bg-gray-50 rounded-xl p-4 flex justify-between items-center">
               <div>
-                <div className="font-semibold text-gray-800 text-sm">{WALL_PRICES[wallColorId]?.label}</div>
+                <div className="font-semibold text-gray-800 text-sm">{WALL_COLORS.find(w=>w.id===wallColorId)?.label}</div>
                 <div className="text-xs text-gray-400 mt-0.5">Фарбування 3 стін (~121 м²)</div>
               </div>
               <div className="font-bold text-gray-900">{fmt(wallTotal)}</div>
@@ -274,10 +274,10 @@ export default function Cart() {
                 <div className="px-6 py-4 flex items-center justify-between">
                   <div>
                     <div className="text-sm font-bold text-gray-900">
-                      {FLOOR_PRICES[floorKind]?.label ?? floorKind}
+                      {FLOOR_MATERIALS.find(f=>f.id===floorKind)?.label ?? floorKind}
                     </div>
                     <div className="text-xs text-gray-400 mt-1">
-                      {ROOM_AREA_M2} м² × {fmt(FLOOR_PRICES[floorKind]?.pricePerM2)}/м²
+                      {ROOM_AREA_M2} м² × {fmt(FLOOR_MATERIALS.find(f=>f.id===floorKind)?.pricePerM2 ?? 0)}/м²
                     </div>
                   </div>
                   <div className="text-right">
@@ -303,7 +303,7 @@ export default function Cart() {
                 <div className="px-6 py-4 flex items-center justify-between">
                   <div>
                     <div className="text-sm font-bold text-gray-900">
-                      {WALL_PRICES[wallColorId]?.label ?? wallColorId}
+                      {WALL_COLORS.find(w=>w.id===wallColorId)?.label ?? wallColorId}
                     </div>
                     <div className="text-xs text-gray-400 mt-1">
                       Фарбування 3 стін, ~121 м²

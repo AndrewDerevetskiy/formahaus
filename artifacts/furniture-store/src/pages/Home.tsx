@@ -18,15 +18,17 @@ const CATEGORIES = [
     bg: "#F5F0E8",
     icon: <LayoutGrid size={18} />,
     count: 38,
+    addToDesigner: "dining",
   },
   {
     id: "chairs",
-    name: "Офісні крісла",
+    name: "Крісла та фотелі",
     sub: "Ергономіка та стиль",
     image: "https://images.unsplash.com/photo-1580480055273-228ff5388ef8?auto=format&fit=crop&w=600&q=80",
     bg: "#EEF0F5",
     icon: <Armchair size={18} />,
     count: 27,
+    addToDesigner: "armchair",
   },
   {
     id: "sofas",
@@ -36,6 +38,7 @@ const CATEGORIES = [
     bg: "#F0EDE8",
     icon: <Sofa size={18} />,
     count: 54,
+    addToDesigner: "sofa",
   },
   {
     id: "lighting",
@@ -45,15 +48,17 @@ const CATEGORIES = [
     bg: "#F5F3E8",
     icon: <Lamp size={18} />,
     count: 41,
+    addToDesigner: "floorlamp",
   },
   {
     id: "storage",
-    name: "Стелажі",
+    name: "Стелажі та комоди",
     sub: "Відкриті та закриті",
     image: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=600&q=80",
     bg: "#EBF0E8",
     icon: <BookOpen size={18} />,
     count: 19,
+    addToDesigner: "bookshelf",
   },
   {
     id: "decor",
@@ -63,22 +68,25 @@ const CATEGORIES = [
     bg: "#E8F0EC",
     icon: <Flower2 size={18} />,
     count: 63,
+    addToDesigner: "plant",
   },
   {
-    id: "beds",
-    name: "Ліжка",
-    sub: "Двоспальні та односпальні",
-    image: "https://images.unsplash.com/photo-1505693314120-0d443867891c?auto=format&fit=crop&w=600&q=80",
+    id: "rugs",
+    name: "Килими",
+    sub: "Натуральні матеріали",
+    image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=600&q=80",
     bg: "#F0E8EE",
     icon: <LayoutGrid size={18} />,
     count: 22,
+    addToDesigner: "rug_classic",
   },
   {
-    id: "outdoor",
-    name: "Садові меблі",
-    sub: "Для тераси та балкону",
-    image: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=600&q=80",
+    id: "tables",
+    name: "Журнальні столики",
+    sub: "Кавові та приставні",
+    image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80",
     bg: "#E8EEF0",
+    addToDesigner: "coffee",
     icon: <Flower2 size={18} />,
     count: 16,
   },
@@ -378,11 +386,11 @@ function CategoryCard({ cat }: { cat: typeof CATEGORIES[number] }) {
           bg={cat.bg}
         />
 
-        {/* "Open 3D Designer" overlay */}
+        {/* "Open in 3D" overlay */}
         <div
-          className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-end justify-center pb-4"
+          className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-end justify-center pb-4"
         >
-          <Link href="/designer">
+          <Link href={cat.addToDesigner ? `/designer?add=${cat.addToDesigner}` : "/designer"}>
             <button
               className="px-4 h-9 bg-white text-gray-900 text-xs font-bold rounded-full shadow-lg flex items-center gap-2 transition-all duration-300"
               style={{
@@ -392,7 +400,7 @@ function CategoryCard({ cat }: { cat: typeof CATEGORIES[number] }) {
               onClick={e => e.stopPropagation()}
             >
               <Box size={13} />
-              Open 3D Designer
+              Додати в 3D
             </button>
           </Link>
         </div>

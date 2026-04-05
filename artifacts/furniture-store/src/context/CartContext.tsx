@@ -1,25 +1,11 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import {
+  FLOOR_MATERIALS, WALL_COLORS, ROOM_AREA_M2,
+  FLOOR_MAT_MAP, WALL_COLOR_MAP,
+} from "../data/products";
 
-/* ═══════════════════════════════════════════════════════════
-   PRICING TABLES
-═══════════════════════════════════════════════════════════ */
-export const FLOOR_PRICES: Record<string, { label: string; pricePerM2: number }> = {
-  oak:      { label: "Light Oak Parquet",  pricePerM2: 45  },
-  walnut:   { label: "Dark Walnut Plank",  pricePerM2: 68  },
-  marble:   { label: "Calacatta Marble",   pricePerM2: 120 },
-  concrete: { label: "Polished Concrete",  pricePerM2: 35  },
-};
-
-export const WALL_PRICES: Record<string, { label: string; price: number }> = {
-  white: { label: "Off White",     price: 280 },
-  sage:  { label: "Sage Green",    price: 340 },
-  sand:  { label: "Warm Sand",     price: 340 },
-  clay:  { label: "Terracotta",    price: 380 },
-  navy:  { label: "Midnight Blue", price: 420 },
-  char:  { label: "Charcoal",      price: 400 },
-};
-
-export const ROOM_AREA_M2 = 81; // 9 m × 9 m
+/* Re-export for convenience in Cart.tsx / other pages */
+export { FLOOR_MATERIALS, WALL_COLORS, ROOM_AREA_M2 };
 
 /* ═══════════════════════════════════════════════════════════
    TYPES
@@ -56,26 +42,17 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems]           = useState<CartItem[]>([]);
-  const [floorKind, setFloorKindSt] = useState("oak");
-  const [wallColorId, setWallClrSt] = useState("white");
+  const [items, setItems]         = useState<CartItem[]>([]);
+  const [floorKind, setFloorKind] = useState("oak");
+  const [wallColorId, setWallColorId] = useState("white");
 
-  const addItem = useCallback((item: CartItem) => {
-    setItems(prev => [...prev, item]);
-  }, []);
-
-  const removeItem = useCallback((id: string) => {
-    setItems(prev => prev.filter(i => i.id !== id));
-  }, []);
-
-  const clearItems = useCallback(() => setItems([]), []);
-
-  const setFloorKind   = useCallback((k: string) => setFloorKindSt(k), []);
-  const setWallColorId = useCallback((id: string) => setWallClrSt(id), []);
+  const addItem    = useCallback((item: CartItem) => setItems(prev => [...prev, item]), []);
+  const removeItem = useCallback((id: string)     => setItems(prev => prev.filter(i => i.id !== id)), []);
+  const clearItems = useCallback(()               => setItems([]), []);
 
   const furnitureTotal = items.reduce((s, i) => s + i.price, 0);
-  const floorTotal     = ROOM_AREA_M2 * (FLOOR_PRICES[floorKind]?.pricePerM2 ?? 45);
-  const wallTotal      = WALL_PRICES[wallColorId]?.price ?? 280;
+  const floorTotal     = ROOM_AREA_M2 * (FLOOR_MAT_MAP.get(floorKind)?.pricePerM2 ?? 45);
+  const wallTotal      = WALL_COLOR_MAP.get(wallColorId)?.price ?? 280;
   const grandTotal     = furnitureTotal + floorTotal + wallTotal;
   const itemCount      = items.length;
 
