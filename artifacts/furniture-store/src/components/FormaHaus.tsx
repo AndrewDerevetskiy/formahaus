@@ -662,24 +662,32 @@ export default function FormaHaus() {
     };
   }, []);
 
-  /* ── Mouse drag — position set via .position.set() only ── */
+  /* ── Pointer drag (mouse + touch + stylus) ── */
   useEffect(() => {
     const container = vpRef.current; if (!container) return;
     let dragging = false;
+    let activePointerId = -1;
 
-    function ndc(e: MouseEvent) {
+    /** Convert a PointerEvent's client position to NDC [-1, 1]. */
+    function ndc(e: PointerEvent) {
       const r = container!.getBoundingClientRect();
-      return { x: ((e.clientX - r.left) / r.width) * 2 - 1, y: -((e.clientY - r.top) / r.height) * 2 + 1 };
+      return {
+        x:  ((e.clientX - r.left) / r.width)  * 2 - 1,
+        y: -((e.clientY - r.top)  / r.height) * 2 + 1,
+      };
     }
 
-    function onDown(e: MouseEvent) {
+    function onPointerDown(e: PointerEvent) {
       const s = sceneRef.current; if (!s) return;
+      // Only handle primary pointer (left button on mouse, first touch finger)
+      if (e.button !== 0 && e.pointerType === "mouse") return;
       e.preventDefault();
+
       const p = ndc(e);
       s.mouse.set(p.x, p.y);
       s.raycaster.setFromCamera(s.mouse, s.camera);
 
-      // Collect only real geometry meshes (exclude contact shadow planes)
+      // Collect only real geometry meshes (exclude contact-shadow planes)
       const meshes: THREE.Mesh[] = [];
       s.items.forEach(it =>
         it.group.traverse(c => {
@@ -689,9 +697,9 @@ export default function FormaHaus() {
 
       const hits = s.raycaster.intersectObjects(meshes, false);
       if (hits.length > 0) {
-        // Walk the full ancestor chain until we find the registered root group.
-        // GLTFLoader wraps geometry in inner Groups, so stopping at the first
-        // Group would match an internal node, not the root we stored in s.items.
+        // Walk the full ancestor chain to find the registered root group.
+        // GLTFLoader nests geometry inside its own inner Groups, so we must
+        // climb past those to reach the gltf.scene root stored in s.items.
         let node: THREE.Object3D | null = hits[0].object;
         let item: PlacedItem | undefined;
         while (node) {
@@ -704,60 +712,82 @@ export default function FormaHaus() {
           s.selected = item;
           setSelId(item.id); setSelLabel(item.label); setSelPrice(item.price);
 
-          // Disable OrbitControls BEFORE setting dragging=true so the camera
-          // does not respond to the same mousedown event.
+          // Stop the event here so OrbitControls (listening on the inner
+          // canvas in bubble phase) never sees this pointerdown.
+          e.stopPropagation();
+
+          // Capture the pointer so pointermove/pointerup keep firing even
+          // if the finger/cursor slides off the canvas edge.
+          container!.setPointerCapture(e.pointerId);
+          activePointerId = e.pointerId;
+
+          // Disable OrbitControls as a second safety net.
           s.controls.enabled = false;
           dragging = true;
 
-          // Record the offset from the drag-plane intersection to the object
-          // origin so the object doesn't "jump" to the cursor on first move.
+          // Record the world-space offset so the piece doesn't snap to the
+          // cursor position on the first move.
           const pt = new THREE.Vector3();
           const planeHit = s.raycaster.ray.intersectPlane(s.dragPlane, pt);
           if (planeHit) s.dragOffset.copy(planeHit).sub(item.group.position);
           else          s.dragOffset.set(0, 0, 0);
         } else {
-          // Clicked a mesh but couldn't resolve its item — deselect
           s.selected = null;
           setSelId(""); setSelLabel(""); setSelPrice(0);
         }
       } else {
-        // Clicked empty space — deselect
         s.selected = null;
         setSelId(""); setSelLabel(""); setSelPrice(0);
       }
     }
 
-    function onMove(e: MouseEvent) {
-      if (!dragging) return;
+    function onPointerMove(e: PointerEvent) {
+      if (!dragging || e.pointerId !== activePointerId) return;
       const s = sceneRef.current; if (!s?.selected) return;
+      e.preventDefault();
+
       const p = ndc(e);
       s.mouse.set(p.x, p.y);
       s.raycaster.setFromCamera(s.mouse, s.camera);
+
       const tgt = new THREE.Vector3();
-      // Guard: intersectPlane returns null when ray is parallel to plane
+      // intersectPlane returns null when ray is parallel to the floor plane
       const hit = s.raycaster.ray.intersectPlane(s.dragPlane, tgt);
       if (!hit) return;
+
       tgt.sub(s.dragOffset);
-      // Clamp within room bounds using component setters (no direct position= assignment)
-      const cx = THREE.MathUtils.clamp(tgt.x, -4, 4);
-      const cz = THREE.MathUtils.clamp(tgt.z, -4, 4);
+      const cx  = THREE.MathUtils.clamp(tgt.x, -4, 4);
+      const cz  = THREE.MathUtils.clamp(tgt.z, -4, 4);
       const cy2 = s.selected.group.position.y;
       // Always use .position.set() — never direct position assignment
       s.selected.group.position.set(cx, cy2, cz);
     }
 
-    function onUp() {
+    function onPointerUp(e: PointerEvent) {
+      if (e.pointerId !== activePointerId) return;
       dragging = false;
-      const s = sceneRef.current; if (s) s.controls.enabled = true;
+      activePointerId = -1;
+      if (container!.hasPointerCapture(e.pointerId)) {
+        container!.releasePointerCapture(e.pointerId);
+      }
+      const s = sceneRef.current;
+      if (s) s.controls.enabled = true;
     }
 
-    container.addEventListener("mousedown", onDown);
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    // pointerdown: capture phase so our handler runs BEFORE OrbitControls
+    // (which listens on the inner canvas in the bubble phase). When furniture
+    // is hit we call stopPropagation(), so OrbitControls never sees the event.
+    // pointermove / pointerup: pointer capture (setPointerCapture) routes these
+    // back to the container automatically, so no window listeners needed.
+    container.addEventListener("pointerdown",   onPointerDown, { capture: true });
+    container.addEventListener("pointermove",   onPointerMove);
+    container.addEventListener("pointerup",     onPointerUp);
+    container.addEventListener("pointercancel", onPointerUp);
     return () => {
-      container.removeEventListener("mousedown", onDown);
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      container.removeEventListener("pointerdown",   onPointerDown, { capture: true });
+      container.removeEventListener("pointermove",   onPointerMove);
+      container.removeEventListener("pointerup",     onPointerUp);
+      container.removeEventListener("pointercancel", onPointerUp);
     };
   }, []);
 
@@ -994,7 +1024,7 @@ export default function FormaHaus() {
 
         {/* ── 3D VIEWPORT ── */}
         <div style={{ flex: 1, position: "relative" }}>
-          <div ref={vpRef} style={{ position: "absolute", inset: 0 }} />
+          <div ref={vpRef} style={{ position: "absolute", inset: 0, touchAction: "none" }} />
           <div style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", background: "rgba(26,26,26,.72)", backdropFilter: "blur(12px)", borderRadius: 20, padding: "5px 16px", fontSize: ".68rem", color: "rgba(255,255,255,.7)", pointerEvents: "none", letterSpacing: .3 }}>
             Orbit · Scroll to zoom · Click + drag to move items
           </div>
