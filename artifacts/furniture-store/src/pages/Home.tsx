@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Link } from "wouter";
 import {
   ChevronRight, ArrowRight, Box, LogIn, Search, Menu, X,
-  Sofa, Armchair, Lamp, Flower2, BookOpen, LayoutGrid,
+  Sofa, Armchair, Lamp, Flower2, BookOpen, LayoutGrid, ShoppingCart,
 } from "lucide-react";
+import { useCart } from "../context/CartContext";
 
 /* ══════════════════════════════════════════════════════════════
    CATALOG CATEGORIES  (used for the 4-column grid)
@@ -133,6 +134,7 @@ function Img({ src, alt, className, bg }: { src: string; alt: string; className?
 ══════════════════════════════════════════════════════════════ */
 function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { itemCount } = useCart();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-100">
@@ -160,11 +162,21 @@ function Nav() {
           </a>
         </nav>
 
-        {/* Right: search + 3D Designer + Login */}
+        {/* Right: search + cart + 3D Designer + Login */}
         <div className="hidden md:flex items-center gap-3 ml-auto">
           <button className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-500">
             <Search size={17} />
           </button>
+          <Link href="/cart">
+            <button className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-600">
+              <ShoppingCart size={18} />
+              {itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold w-[18px] h-[18px] rounded-full flex items-center justify-center leading-none">
+                  {itemCount}
+                </span>
+              )}
+            </button>
+          </Link>
           <Link href="/designer">
             <button className="flex items-center gap-2 px-4 h-9 rounded-lg bg-gray-900 text-white text-sm font-semibold hover:bg-gray-700 transition-colors">
               <Box size={15} />

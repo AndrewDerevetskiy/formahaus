@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, useCallback, useMemo, Suspense } from "react";
+import { Link } from "wouter";
 import * as THREE from "three";
 import { Canvas, useThree, ThreeEvent } from "@react-three/fiber";
 import {
   OrbitControls, Environment, ContactShadows, useGLTF,
 } from "@react-three/drei";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter.js";
+import { useCart } from "../context/CartContext";
 
 /* ══════════════════════════════════════════════════════════════
    CATALOG
@@ -862,6 +864,8 @@ function checkWebGL(): boolean {
    MAIN COMPONENT
 ══════════════════════════════════════════════════════════════ */
 export default function FormaHaus() {
+  const cart = useCart();
+
   const [registryReady, setRegistryReady] = useState(false);
   const [items, setItems]                 = useState<PlacedItem[]>([]);
   const [total, setTotal]                 = useState(0);
@@ -870,8 +874,9 @@ export default function FormaHaus() {
   const [selPrice, setSelPrice]           = useState(0);
   const [tab, setTab]                     = useState<"furniture" | "materials">("furniture");
   const [openCats, setOpenCats]           = useState<Set<string>>(new Set(["seating"]));
-  const [floorKind, setFloorKind]         = useState("oak");
-  const [wallHex, setWallHex]             = useState("#F5F0EA");
+  const [floorKind, setFloorKindSt]       = useState("oak");
+  const [wallHex, setWallHexSt]           = useState("#F5F0EA");
+  const [wallColorId, setWallColorIdSt]   = useState("white");
   const [thumbs, setThumbs]               = useState<Record<string, string>>({});
 
   const webglOk     = useMemo(() => checkWebGL(), []);
@@ -893,7 +898,20 @@ export default function FormaHaus() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const addFurniture = useCallback((type: string, label: string, price: number) => {
+  /* Wrap floor/wall setters to keep cart in sync */
+  const setFloorKind = useCallback((k: string) => {
+    setFloorKindSt(k);
+    cart.setFloorKind(k);
+  }, [cart]);
+
+  const setWallHex = useCallback((hex: string) => {
+    setWallHexSt(hex);
+    // Find the wall color id from hex
+    const wc = WALL_COLORS.find(w => w.hex === hex);
+    if (wc) { setWallColorIdSt(wc.id); cart.setWallColorId(wc.id); }
+  }, [cart]);
+
+  const addFurniture = useCallback((type: string, label: string, price: number, icon = "") => {
     if (!registryReady) return;
     const id = `${Date.now()}-${Math.random()}`;
     const y = Y_OFFSET[type] ?? 0;
@@ -902,7 +920,8 @@ export default function FormaHaus() {
     ];
     setItems(prev => [...prev, { id, type, label, price, initPos }]);
     setTotal(t => t + price);
-  }, [registryReady]);
+    cart.addItem({ id, type, label, price, icon });
+  }, [registryReady, cart]);
 
   const removeSelected = useCallback(() => {
     setItems(prev => {
@@ -911,13 +930,15 @@ export default function FormaHaus() {
       setTotal(t => t - item.price);
       return prev.filter(i => i.id !== selId);
     });
+    cart.removeItem(selId);
     setSelId(""); setSelLabel(""); setSelPrice(0);
-  }, [selId]);
+  }, [selId, cart]);
 
   const clearRoom = useCallback(() => {
     setItems([]); setTotal(0);
     setSelId(""); setSelLabel(""); setSelPrice(0);
-  }, []);
+    cart.clearItems();
+  }, [cart]);
 
   const rotateSelected = useCallback((dir: number) => {
     if (!selId) return;
@@ -949,11 +970,30 @@ export default function FormaHaus() {
 
       {/* ── HEADER ── */}
       <header style={{ height: 56, background: "#1A1A1A", display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0, zIndex: 200 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-          <span style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: 4, color: "#fff" }}>FORMA</span>
-          <span style={{ fontSize: "1.15rem", fontWeight: 300, letterSpacing: 4, color: "#C8A870" }}>HAUS</span>
-        </div>
+        <Link href="/">
+          <div style={{ display: "flex", alignItems: "baseline", gap: 4, cursor: "pointer" }}>
+            <span style={{ fontSize: "1.15rem", fontWeight: 800, letterSpacing: 4, color: "#fff" }}>FORMA</span>
+            <span style={{ fontSize: "1.15rem", fontWeight: 300, letterSpacing: 4, color: "#C8A870" }}>HAUS</span>
+          </div>
+        </Link>
         <div style={{ flex: 1, fontSize: ".7rem", color: "rgba(255,255,255,.4)", textAlign: "center", letterSpacing: .5 }}>3D INTERIOR DESIGNER</div>
+
+        {/* Cart icon with badge */}
+        <Link href="/cart">
+          <div style={{ position: "relative", cursor: "pointer", padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,.18)", background: "rgba(255,255,255,.07)", display: "flex", alignItems: "center", gap: 8, color: "#fff" }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+            <span style={{ fontSize: ".72rem", fontWeight: 600 }}>Кошик</span>
+            {cart.itemCount > 0 && (
+              <span style={{ position: "absolute", top: -6, right: -6, background: "#2563EB", color: "#fff", fontSize: ".6rem", fontWeight: 800, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}>
+                {cart.itemCount}
+              </span>
+            )}
+          </div>
+        </Link>
+
         <div style={{ display: "flex", alignItems: "center", gap: 14, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 12, padding: "8px 18px" }}>
           <div>
             <div style={{ fontSize: ".58rem", fontWeight: 700, letterSpacing: 1.5, color: "rgba(255,255,255,.45)", textTransform: "uppercase", marginBottom: 1 }}>Project Total</div>
@@ -1015,7 +1055,7 @@ export default function FormaHaus() {
                 <div style={{ fontSize: ".65rem", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#999", marginBottom: 12 }}>Floor Material</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {FLOOR_OPTIONS.map(fo => {
-                    const sel = floorKind === fo.id;
+                    const sel = floorKindSt === fo.id;
                     return (
                       <button key={fo.id} onClick={() => setFloorKind(fo.id)}
                         style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${sel ? "#1A1A1A" : "#EAE4DC"}`, background: sel ? "#1A1A1A" : "transparent", cursor: "pointer", textAlign: "left", transition: "all .15s" }}>
@@ -1034,7 +1074,7 @@ export default function FormaHaus() {
                 <div style={{ fontSize: ".65rem", fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#999", marginBottom: 12 }}>Wall Colour</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
                   {WALL_COLORS.map(wc => {
-                    const sel = wallHex === wc.hex;
+                    const sel = wallHexSt === wc.hex;
                     return (
                       <button key={wc.id} onClick={() => setWallHex(wc.hex)}
                         style={{ padding: "10px 6px", borderRadius: 10, border: `1.5px solid ${sel ? "#1A1A1A" : "#EAE4DC"}`, background: "transparent", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, transition: "all .15s" }}>
@@ -1069,8 +1109,8 @@ export default function FormaHaus() {
             >
               <SceneContent
                 items={items}
-                floorKind={floorKind}
-                wallHex={wallHex}
+                floorKind={floorKindSt}
+                wallHex={wallHexSt}
                 selId={selId}
                 onSelect={onSelect}
                 onDeselect={onDeselect}
