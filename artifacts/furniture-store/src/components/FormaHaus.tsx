@@ -674,29 +674,54 @@ export default function FormaHaus() {
 
     function onDown(e: MouseEvent) {
       const s = sceneRef.current; if (!s) return;
+      e.preventDefault();
       const p = ndc(e);
       s.mouse.set(p.x, p.y);
       s.raycaster.setFromCamera(s.mouse, s.camera);
-      const meshes: THREE.Object3D[] = [];
-      s.items.forEach(it => it.group.traverse(c => { if (c instanceof THREE.Mesh && c.name !== "__shadow__") meshes.push(c); }));
-      const hits = s.raycaster.intersectObjects(meshes);
+
+      // Collect only real geometry meshes (exclude contact shadow planes)
+      const meshes: THREE.Mesh[] = [];
+      s.items.forEach(it =>
+        it.group.traverse(c => {
+          if (c instanceof THREE.Mesh && c.name !== "__shadow__") meshes.push(c);
+        })
+      );
+
+      const hits = s.raycaster.intersectObjects(meshes, false);
       if (hits.length > 0) {
-        let obj: THREE.Object3D | null = hits[0].object;
-        while (obj && !(obj instanceof THREE.Group)) obj = obj.parent;
-        if (obj instanceof THREE.Group) {
-          const item = s.items.find(it => it.group === obj);
-          if (item) {
-            s.selected = item;
-            setSelId(item.id); setSelLabel(item.label); setSelPrice(item.price);
-            s.controls.enabled = false; dragging = true;
-            // Record offset between intersection point and object origin
-            const pt = new THREE.Vector3();
-            const hit = s.raycaster.ray.intersectPlane(s.dragPlane, pt);
-            if (hit) s.dragOffset.copy(hit).sub(item.group.position);
-            else s.dragOffset.set(0, 0, 0);
-          }
+        // Walk the full ancestor chain until we find the registered root group.
+        // GLTFLoader wraps geometry in inner Groups, so stopping at the first
+        // Group would match an internal node, not the root we stored in s.items.
+        let node: THREE.Object3D | null = hits[0].object;
+        let item: PlacedItem | undefined;
+        while (node) {
+          item = s.items.find(it => it.group === node);
+          if (item) break;
+          node = node.parent;
+        }
+
+        if (item) {
+          s.selected = item;
+          setSelId(item.id); setSelLabel(item.label); setSelPrice(item.price);
+
+          // Disable OrbitControls BEFORE setting dragging=true so the camera
+          // does not respond to the same mousedown event.
+          s.controls.enabled = false;
+          dragging = true;
+
+          // Record the offset from the drag-plane intersection to the object
+          // origin so the object doesn't "jump" to the cursor on first move.
+          const pt = new THREE.Vector3();
+          const planeHit = s.raycaster.ray.intersectPlane(s.dragPlane, pt);
+          if (planeHit) s.dragOffset.copy(planeHit).sub(item.group.position);
+          else          s.dragOffset.set(0, 0, 0);
+        } else {
+          // Clicked a mesh but couldn't resolve its item — deselect
+          s.selected = null;
+          setSelId(""); setSelLabel(""); setSelPrice(0);
         }
       } else {
+        // Clicked empty space — deselect
         s.selected = null;
         setSelId(""); setSelLabel(""); setSelPrice(0);
       }
