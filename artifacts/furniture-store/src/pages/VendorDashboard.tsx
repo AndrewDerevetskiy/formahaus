@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { API_BASE } from "../lib/api";
+import NavBar from "../components/NavBar";
 
 interface Vendor { id: number; shop_name: string; email: string; }
 interface Product { id: number; name: string; price: number; category_id: string; image_url: string; created_at: string; }
@@ -84,19 +85,22 @@ export default function VendorDashboard() {
   if (!vendor) return null;
 
   return (
-    <div style={{ background: "#F9F9F9", minHeight: "100vh", fontFamily: "'Inter',system-ui,sans-serif" }}>
-      {/* Header */}
-      <header style={{ background: "#fff", borderBottom: "1px solid #EBEBEB", height: 64, display: "flex", alignItems: "center", padding: "0 32px" }}>
-        <Link href="/"><span style={{ fontSize: 18, fontWeight: 900, letterSpacing: 3, color: "#111", cursor: "pointer", userSelect: "none" }}>FORMA<span style={{ fontWeight: 300, color: "#2563EB" }}>HAUS</span></span></Link>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16 }}>
-          <span style={{ fontSize: 14, color: "#666" }}>👋 {vendor.shop_name}</span>
-          <button onClick={handleLogout} style={{ fontSize: 13, color: "#888", background: "none", border: "1px solid #E5E5E5", borderRadius: 8, padding: "5px 14px", cursor: "pointer" }}>Вийти</button>
-        </div>
-      </header>
+    <div style={{ background: "#FAFAFA", minHeight: "100vh", fontFamily: "'Inter',system-ui,sans-serif" }}>
+      <NavBar activePage="vendor" />
 
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "40px 32px" }}>
-        <h1 style={{ fontSize: 26, fontWeight: 900, color: "#111", margin: "0 0 4px" }}>Панель продавця</h1>
-        <p style={{ color: "#888", fontSize: 14, margin: "0 0 32px" }}>{vendor.shop_name} · {vendor.email}</p>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
+          <div>
+            <h1 style={{ fontSize: 26, fontWeight: 900, color: "#111", margin: "0 0 4px" }}>Панель продавця</h1>
+            <p style={{ color: "#888", fontSize: 14, margin: 0 }}>👋 {vendor.shop_name} · {vendor.email}</p>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Link href="/" style={{ textDecoration: "none" }}>
+              <button style={{ fontSize: 13, fontWeight: 600, color: "#2563EB", background: "#EEF2FF", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer" }}>← Магазин</button>
+            </Link>
+            <button onClick={handleLogout} style={{ fontSize: 13, color: "#888", background: "#fff", border: "1px solid #E5E5E5", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 600 }}>Вийти</button>
+          </div>
+        </div>
 
         {/* Tabs */}
         <div style={{ display: "flex", gap: 4, borderBottom: "2px solid #F0F0F0", marginBottom: 32 }}>

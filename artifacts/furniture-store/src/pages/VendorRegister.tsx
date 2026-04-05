@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { API_BASE } from "../lib/api";
+import NavBar from "../components/NavBar";
 
 export default function VendorRegister() {
   const [, navigate] = useLocation();
@@ -31,10 +32,7 @@ export default function VendorRegister() {
 
   return (
     <div style={{ background: "#fff", minHeight: "100vh", fontFamily: "'Inter',system-ui,sans-serif", display: "flex", flexDirection: "column" }}>
-      {/* Header */}
-      <header style={{ borderBottom: "1px solid #F0F0F0", height: 64, display: "flex", alignItems: "center", padding: "0 32px" }}>
-        <Link href="/"><span style={{ fontSize: 18, fontWeight: 900, letterSpacing: 3, color: "#111", cursor: "pointer", userSelect: "none" }}>FORMA<span style={{ fontWeight: 300, color: "#2563EB" }}>HAUS</span></span></Link>
-      </header>
+      <NavBar activePage="vendor" />
 
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
         <div style={{ width: "100%", maxWidth: 440 }}>
