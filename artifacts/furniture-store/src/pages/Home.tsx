@@ -1,355 +1,173 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
+import { useCart } from "../context/CartContext";
+import { API_BASE } from "../lib/api";
 
-/* ─── catalogue items ──────────────────────────────────────── */
-const CATALOG = [
-  {
-    id: "dining",
-    name: "Обідні столи",
-    addTo: "dining",
-    image: "https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?auto=format&fit=crop&w=500&q=80",
-    bg: "#F9F6F2",
-  },
-  {
-    id: "chairs",
-    name: "Офісні крісла",
-    addTo: "armchair",
-    image: "https://images.unsplash.com/photo-1580480055273-228ff5388ef8?auto=format&fit=crop&w=500&q=80",
-    bg: "#F4F4F7",
-  },
-  {
-    id: "wardrobes",
-    name: "Шафи",
-    addTo: "bookshelf",
-    image: "https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=500&q=80",
-    bg: "#F5F5F5",
-  },
-  {
-    id: "beds",
-    name: "Ліжка",
-    addTo: "sofa",
-    image: "https://images.unsplash.com/photo-1505693314120-0d443867891c?auto=format&fit=crop&w=500&q=80",
-    bg: "#F4F5F7",
-  },
+interface Category { id: string; name_uk: string; image_url: string; }
+
+/* ─── static fallback if API not ready ─── */
+const FALLBACK_CATEGORIES: Category[] = [
+  { id: "tables",   name_uk: "Столи",      image_url: "https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?auto=format&fit=crop&w=600&q=80" },
+  { id: "chairs",   name_uk: "Крісла",     image_url: "https://images.unsplash.com/photo-1580480055273-228ff5388ef8?auto=format&fit=crop&w=600&q=80" },
+  { id: "lighting", name_uk: "Освітлення", image_url: "https://images.unsplash.com/photo-1565814636199-ae8133055c1c?auto=format&fit=crop&w=600&q=80" },
+  { id: "decor",    name_uk: "Оздоблення", image_url: "https://images.unsplash.com/photo-1611048267451-e6ed903d4a38?auto=format&fit=crop&w=600&q=80" },
 ];
 
-/* ─── image with fallback ──────────────────────────────────── */
-function SafeImg({
-  src, alt, className, bg = "#F0EBE4",
-}: { src: string; alt: string; className?: string; bg?: string }) {
-  const [err, setErr] = useState(false);
-  if (err)
-    return (
-      <div className={`flex items-center justify-center ${className}`} style={{ background: bg }}>
-        <span className="text-4xl opacity-20">🛋</span>
-      </div>
-    );
-  return <img src={src} alt={alt} className={className} onError={() => setErr(true)} />;
-}
-
-/* ─── nav ──────────────────────────────────────────────────── */
+/* ─── nav ─── */
 function Nav() {
+  const { itemCount } = useCart();
   return (
-    <header
-      style={{
-        fontFamily: "'Inter', system-ui, sans-serif",
-        background: "#fff",
-        borderBottom: "1px solid #F0F0F0",
-        position: "sticky",
-        top: 0,
-        zIndex: 50,
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1100,
-          margin: "0 auto",
-          padding: "0 32px",
-          height: 64,
-          display: "flex",
-          alignItems: "center",
-        }}
-      >
-        {/* Logo */}
+    <header style={{ background: "#fff", borderBottom: "1px solid #F0F0F0", position: "sticky", top: 0, zIndex: 50, fontFamily: "'Inter',system-ui,sans-serif" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 32px", height: 64, display: "flex", alignItems: "center" }}>
         <Link href="/">
-          <span
-            style={{
-              fontSize: 18,
-              fontWeight: 900,
-              letterSpacing: 3,
-              color: "#111",
-              cursor: "pointer",
-              userSelect: "none",
-              textDecoration: "none",
-            }}
-          >
+          <span style={{ fontSize: 18, fontWeight: 900, letterSpacing: 3, color: "#111", cursor: "pointer", userSelect: "none", textDecoration: "none" }}>
             FORMA<span style={{ fontWeight: 300, color: "#2563EB" }}>HAUS</span>
           </span>
         </Link>
 
-        {/* Center nav */}
         <nav style={{ display: "flex", gap: 28, margin: "0 auto" }}>
-          <a
-            href="/"
-            style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: "#111",
-              textDecoration: "none",
-            }}
-          >
-            Home
-          </a>
-          <a
-            href="#catalog"
-            style={{
-              fontSize: 14,
-              fontWeight: 400,
-              color: "#888",
-              textDecoration: "none",
-            }}
-          >
-            Catalog
-          </a>
+          <a href="/" style={{ fontSize: 14, fontWeight: 600, color: "#111", textDecoration: "none" }}>Home</a>
+          <a href="#catalog" style={{ fontSize: 14, fontWeight: 400, color: "#888", textDecoration: "none" }}>Catalog</a>
+          <Link href="/vendor/dashboard" style={{ fontSize: 14, fontWeight: 400, color: "#888", textDecoration: "none" }}>Продавцям</Link>
         </nav>
 
-        {/* Right — only Login */}
-        <button
-          style={{
-            background: "#2563EB",
-            color: "#fff",
-            border: "none",
-            borderRadius: 8,
-            padding: "7px 22px",
-            fontSize: 14,
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
-          Login
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Link href="/cart">
+            <button style={{ position: "relative", background: "none", border: "1px solid #E5E5E5", borderRadius: 8, padding: "6px 16px", fontSize: 14, fontWeight: 500, color: "#333", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              🛒 Кошик
+              {itemCount > 0 && (
+                <span style={{ background: "#2563EB", color: "#fff", borderRadius: 999, fontSize: 11, fontWeight: 700, padding: "1px 7px" }}>{itemCount}</span>
+              )}
+            </button>
+          </Link>
+          <Link href="/vendor/register">
+            <button style={{ background: "#2563EB", color: "#fff", border: "none", borderRadius: 8, padding: "7px 22px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Login</button>
+          </Link>
+        </div>
       </div>
     </header>
   );
 }
 
-/* ─── hero ─────────────────────────────────────────────────── */
+/* ─── hero ─── */
 function Hero() {
   return (
-    <section
-      style={{
-        background: "#fff",
-        fontFamily: "'Inter', system-ui, sans-serif",
-        padding: "72px 32px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1100,
-          margin: "0 auto",
-          display: "flex",
-          alignItems: "center",
-          gap: 64,
-          flexWrap: "wrap",
-        }}
-      >
-        {/* Left */}
-        <div style={{ flex: "1 1 340px", minWidth: 260 }}>
-          <h1
-            style={{
-              fontSize: "clamp(36px, 5vw, 56px)",
-              fontWeight: 900,
-              color: "#111",
-              lineHeight: 1.1,
-              margin: "0 0 16px",
-            }}
-          >
+    <section style={{ background: "#fff", fontFamily: "'Inter',system-ui,sans-serif", padding: "72px 32px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center" }}>
+        <div>
+          <h1 style={{ fontSize: "clamp(36px,4vw,54px)", fontWeight: 900, color: "#111", lineHeight: 1.1, margin: "0 0 16px" }}>
             Меблі, які<br />дизайнери люблять
           </h1>
-          <p
-            style={{
-              fontSize: 16,
-              color: "#777",
-              lineHeight: 1.6,
-              margin: "0 0 32px",
-              maxWidth: 340,
-            }}
-          >
+          <p style={{ fontSize: 16, color: "#777", lineHeight: 1.6, margin: "0 0 32px", maxWidth: 360 }}>
             Обирай меблі для кухні, кімнати чи вітальні у нашому магазині
           </p>
           <a href="#catalog" style={{ textDecoration: "none" }}>
-            <button
-              style={{
-                background: "#2563EB",
-                color: "#fff",
-                border: "none",
-                borderRadius: 10,
-                padding: "12px 28px",
-                fontSize: 15,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
+            <button style={{ background: "#2563EB", color: "#fff", border: "none", borderRadius: 10, padding: "12px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
               View catalog
             </button>
           </a>
         </div>
-
-        {/* Right — single static interior photo */}
-        <div style={{ flex: "1 1 380px", minWidth: 280 }}>
-          <div
-            style={{
-              borderRadius: 20,
-              overflow: "hidden",
-              aspectRatio: "4/3",
-              background: "#F5F0E8",
-            }}
-          >
-            <SafeImg
-              src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=900&q=80"
-              alt="Modern living room interior"
-              className="w-full h-full object-cover"
-              bg="#F5F0E8"
-            />
-          </div>
+        <div style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "4/3", background: "#F5F0E8" }}>
+          <img
+            src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=900&q=80"
+            alt="Modern living room"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
         </div>
       </div>
     </section>
   );
 }
 
-/* ─── catalog grid ─────────────────────────────────────────── */
+/* ─── catalog ─── */
 function CatalogGrid() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/categories`)
+      .then(r => r.json())
+      .then(data => { setCategories(Array.isArray(data) && data.length ? data : FALLBACK_CATEGORIES); setLoading(false); })
+      .catch(() => { setCategories(FALLBACK_CATEGORIES); setLoading(false); });
+  }, []);
+
   return (
-    <section
-      id="catalog"
-      style={{
-        background: "#fff",
-        fontFamily: "'Inter', system-ui, sans-serif",
-        padding: "24px 32px 80px",
-      }}
-    >
+    <section id="catalog" style={{ background: "#fff", fontFamily: "'Inter',system-ui,sans-serif", padding: "24px 32px 80px" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <h2
-          style={{
-            fontSize: 28,
-            fontWeight: 900,
-            color: "#111",
-            margin: "0 0 28px",
-          }}
-        >
-          Каталог
-        </h2>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 20,
-          }}
-        >
-          {CATALOG.map(cat => (
-            <CatalogCard key={cat.id} cat={cat} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function CatalogCard({ cat }: { cat: typeof CATALOG[number] }) {
-  const [hov, setHov] = useState(false);
-  const [btnHov, setBtnHov] = useState(false);
-
-  return (
-    <article
-      style={{
-        background: "#fff",
-        border: "1px solid #EBEBEB",
-        borderRadius: 16,
-        overflow: "hidden",
-        cursor: "pointer",
-        transition: "box-shadow .2s, transform .2s",
-        boxShadow: hov ? "0 8px 32px rgba(0,0,0,.08)" : "none",
-        transform: hov ? "translateY(-2px)" : "none",
-      }}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-    >
-      {/* Product image on light background */}
-      <div
-        style={{
-          background: cat.bg,
-          aspectRatio: "1",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-          position: "relative",
-        }}
-      >
-        <SafeImg
-          src={cat.image}
-          alt={cat.name}
-          className="w-4/5 h-4/5 object-contain"
-          bg={cat.bg}
-        />
-
-        {/* "Try in 3D" — appears on hover */}
-        {hov && (
-          <Link href={`/designer?add=${cat.addTo}`}>
-            <button
-              onMouseEnter={() => setBtnHov(true)}
-              onMouseLeave={() => setBtnHov(false)}
-              style={{
-                position: "absolute",
-                bottom: 10,
-                left: "50%",
-                transform: "translateX(-50%)",
-                background: "#fff",
-                border: "none",
-                borderRadius: 999,
-                padding: "6px 16px",
-                fontSize: 12,
-                fontWeight: 700,
-                color: "#111",
-                cursor: "pointer",
-                boxShadow: "0 2px 12px rgba(0,0,0,.14)",
-                opacity: btnHov ? 1 : 0.92,
-                whiteSpace: "nowrap",
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              Приміряти у 3D
-            </button>
-          </Link>
+        <h2 style={{ fontSize: 28, fontWeight: 900, color: "#111", margin: "0 0 28px" }}>Каталог</h2>
+        {loading ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 20 }}>
+            {[0,1,2,3].map(i => (
+              <div key={i} style={{ background: "#F5F5F5", borderRadius: 16, aspectRatio: "1", animation: "pulse 1.5s ease-in-out infinite" }} />
+            ))}
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 20 }}>
+            {categories.map(cat => <CategoryCard key={cat.id} cat={cat} />)}
+          </div>
         )}
       </div>
-
-      {/* Name */}
-      <div style={{ padding: "14px 16px" }}>
-        <div
-          style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color: "#111",
-            textAlign: "center",
-          }}
-        >
-          {cat.name}
-        </div>
-      </div>
-    </article>
+    </section>
   );
 }
 
-/* ─── page ─────────────────────────────────────────────────── */
+function CategoryCard({ cat }: { cat: Category }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <Link href={`/category/${cat.id}`}>
+      <article
+        style={{ background: "#fff", border: "1px solid #EBEBEB", borderRadius: 16, overflow: "hidden", cursor: "pointer", transition: "box-shadow .2s, transform .2s", boxShadow: hov ? "0 8px 32px rgba(0,0,0,.08)" : "none", transform: hov ? "translateY(-2px)" : "none" }}
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+      >
+        <div style={{ background: "#F7F6F4", aspectRatio: "1", overflow: "hidden", position: "relative" }}>
+          <img
+            src={cat.image_url}
+            alt={cat.name_uk}
+            style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform .4s", transform: hov ? "scale(1.04)" : "scale(1)" }}
+            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          {hov && (
+            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,.18)", display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 12 }}>
+              <span style={{ background: "#fff", borderRadius: 999, padding: "5px 16px", fontSize: 12, fontWeight: 700, color: "#111", boxShadow: "0 2px 12px rgba(0,0,0,.14)" }}>Переглянути →</span>
+            </div>
+          )}
+        </div>
+        <div style={{ padding: "14px 16px", textAlign: "center" }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>{cat.name_uk}</div>
+        </div>
+      </article>
+    </Link>
+  );
+}
+
+/* ─── vendor CTA ─── */
+function VendorCTA() {
+  return (
+    <section style={{ background: "#F8F9FF", fontFamily: "'Inter',system-ui,sans-serif", padding: "64px 32px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 32 }}>
+        <div>
+          <h2 style={{ fontSize: 26, fontWeight: 900, color: "#111", margin: "0 0 8px" }}>Ви виробник або продавець меблів?</h2>
+          <p style={{ color: "#666", fontSize: 15, margin: 0 }}>Зареєструйтесь і розміщуйте свої товари на FormaHaus. Безкоштовно.</p>
+        </div>
+        <Link href="/vendor/register">
+          <button style={{ background: "#2563EB", color: "#fff", border: "none", borderRadius: 10, padding: "13px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+            Стати продавцем →
+          </button>
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+/* ─── page ─── */
 export default function Home() {
   return (
     <div style={{ background: "#fff", minHeight: "100vh" }}>
       <Nav />
       <Hero />
       <CatalogGrid />
+      <VendorCTA />
     </div>
   );
 }
