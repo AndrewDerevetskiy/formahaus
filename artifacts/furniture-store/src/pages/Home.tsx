@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useCart } from "../context/CartContext";
 
 /* ─── catalogue items ──────────────────────────────────────── */
 const CATALOG = [
@@ -50,7 +49,6 @@ function SafeImg({
 
 /* ─── nav ──────────────────────────────────────────────────── */
 function Nav() {
-  const { itemCount } = useCart();
   return (
     <header
       style={{
@@ -70,7 +68,6 @@ function Nav() {
           height: 64,
           display: "flex",
           alignItems: "center",
-          gap: 40,
         }}
       >
         {/* Logo */}
@@ -91,7 +88,7 @@ function Nav() {
         </Link>
 
         {/* Center nav */}
-        <nav style={{ display: "flex", gap: 28, marginLeft: 8 }}>
+        <nav style={{ display: "flex", gap: 28, margin: "0 auto" }}>
           <a
             href="/"
             style={{
@@ -116,57 +113,21 @@ function Nav() {
           </a>
         </nav>
 
-        {/* Right */}
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/cart">
-            <button
-              style={{
-                position: "relative",
-                background: "none",
-                border: "1px solid #E5E5E5",
-                borderRadius: 8,
-                padding: "6px 16px",
-                fontSize: 14,
-                fontWeight: 500,
-                color: "#333",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              Кошик
-              {itemCount > 0 && (
-                <span
-                  style={{
-                    background: "#2563EB",
-                    color: "#fff",
-                    borderRadius: 999,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    padding: "1px 7px",
-                  }}
-                >
-                  {itemCount}
-                </span>
-              )}
-            </button>
-          </Link>
-          <button
-            style={{
-              background: "#2563EB",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              padding: "6px 20px",
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Login
-          </button>
-        </div>
+        {/* Right — only Login */}
+        <button
+          style={{
+            background: "#2563EB",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            padding: "7px 22px",
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Login
+        </button>
       </div>
     </header>
   );
@@ -216,40 +177,22 @@ function Hero() {
           >
             Обирай меблі для кухні, кімнати чи вітальні у нашому магазині
           </p>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <a href="#catalog" style={{ textDecoration: "none" }}>
-              <button
-                style={{
-                  background: "#2563EB",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 10,
-                  padding: "12px 28px",
-                  fontSize: 15,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                View catalog
-              </button>
-            </a>
-            <Link href="/designer">
-              <button
-                style={{
-                  background: "none",
-                  color: "#555",
-                  border: "1px solid #E0E0E0",
-                  borderRadius: 10,
-                  padding: "12px 24px",
-                  fontSize: 15,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                3D Designer
-              </button>
-            </Link>
-          </div>
+          <a href="#catalog" style={{ textDecoration: "none" }}>
+            <button
+              style={{
+                background: "#2563EB",
+                color: "#fff",
+                border: "none",
+                borderRadius: 10,
+                padding: "12px 28px",
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              View catalog
+            </button>
+          </a>
         </div>
 
         {/* Right — single static interior photo */}
