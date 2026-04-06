@@ -48,10 +48,22 @@ export default function ProductPage() {
 
   function handleTry3D() {
     if (!product) return;
-    const target = product.designer_type
-      ? `/designer?add=${encodeURIComponent(product.designer_type)}`
-      : "/designer";
-    navigate(target);
+    /* If the vendor uploaded a real GLB file, pass its URL to the designer */
+    if (product.model_path) {
+      const modelUrl = product.model_path.startsWith("http")
+        ? product.model_path
+        : `${window.location.origin}${product.model_path}`;
+      navigate(
+        `/designer?modelUrl=${encodeURIComponent(modelUrl)}&label=${encodeURIComponent(product.name)}&price=${encodeURIComponent(product.price)}`
+      );
+      return;
+    }
+    /* Otherwise use the built-in designer_type */
+    if (product.designer_type) {
+      navigate(`/designer?add=${encodeURIComponent(product.designer_type)}`);
+      return;
+    }
+    navigate("/designer");
   }
 
   if (loading) return (

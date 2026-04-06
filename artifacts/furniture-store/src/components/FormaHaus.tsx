@@ -518,6 +518,7 @@ async function initModelRegistry(): Promise<void> {
 interface PlacedItem {
   id: string; type: string; label: string; price: number;
   initPos: [number, number, number];
+  modelUrl?: string; /* custom GLB URL for vendor-uploaded models */
 }
 interface DragActive {
   groupRef: React.RefObject<THREE.Group | null>;
@@ -559,7 +560,7 @@ function FurniturePiece({
       if (groupRef.current) groupRef.current.rotation.y += dir * (Math.PI / 8);
     });
   }, [item.id, registerRotate]);
-  const url = urlRegistry.get(item.type)!;
+  const url = item.modelUrl ?? urlRegistry.get(item.type) ?? urlRegistry.get("sofa")!;
 
   const { scene } = useGLTF(url);
 
@@ -899,17 +900,35 @@ export default function FormaHaus() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* Auto-add product from URL ?add=productId (linked from catalog) */
+  /* Auto-add product from URL params when designer opens from catalog */
   useEffect(() => {
     if (!registryReady) return;
     const params = new URLSearchParams(window.location.search);
+
+    /* Case 1: ?add=<designer_type>  — built-in furniture */
     const addId = params.get("add");
-    if (!addId) return;
-    const prod = ITEMS.find(i => i.type === addId);
-    if (prod) addFurniture(prod.type, prod.label, prod.price, prod.icon);
-    // Remove param from URL without reloading
+    if (addId) {
+      const prod = ITEMS.find(i => i.type === addId);
+      if (prod) addFurniture(prod.type, prod.label, prod.price, prod.icon);
+    }
+
+    /* Case 2: ?modelUrl=<url>&label=<name>&price=<n>  — vendor GLB upload */
+    const modelUrl = params.get("modelUrl");
+    if (modelUrl) {
+      const label = params.get("label") ?? "Товар";
+      const price = parseFloat(params.get("price") ?? "0") || 0;
+      const type  = `custom_${Date.now()}`;
+      /* Register the custom model URL so FurniturePiece can find it */
+      urlRegistry.set(type, modelUrl);
+      addFurniture(type, label, price, "📦", modelUrl);
+    }
+
+    /* Clean up URL */
     const url = new URL(window.location.href);
     url.searchParams.delete("add");
+    url.searchParams.delete("modelUrl");
+    url.searchParams.delete("label");
+    url.searchParams.delete("price");
     window.history.replaceState({}, "", url.toString());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [registryReady]);
@@ -925,14 +944,14 @@ export default function FormaHaus() {
     cart.setWallColorId(id);
   }, [cart]);
 
-  const addFurniture = useCallback((type: string, label: string, price: number, icon = "") => {
+  const addFurniture = useCallback((type: string, label: string, price: number, icon = "", modelUrl?: string) => {
     if (!registryReady) return;
     const id = `${Date.now()}-${Math.random()}`;
     const y = Y_OFFSET[type] ?? 0;
     const initPos: [number, number, number] = [
       (Math.random() - .5) * 5, y, (Math.random() - .5) * 5,
     ];
-    setItems(prev => [...prev, { id, type, label, price, initPos }]);
+    setItems(prev => [...prev, { id, type, label, price, initPos, modelUrl }]);
     setTotal(t => t + price);
     cart.addItem({ id, type, label, price, icon });
   }, [registryReady, cart]);

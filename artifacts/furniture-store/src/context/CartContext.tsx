@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import {
   FLOOR_MATERIALS, WALL_COLORS, ROOM_AREA_M2,
   FLOOR_MAT_MAP, WALL_COLOR_MAP,
@@ -6,6 +6,10 @@ import {
 
 /* Re-export for convenience in Cart.tsx / other pages */
 export { FLOOR_MATERIALS, WALL_COLORS, ROOM_AREA_M2 };
+
+const LS_ITEMS    = "formahaus_cart_items";
+const LS_FLOOR    = "formahaus_floor_kind";
+const LS_WALL     = "formahaus_wall_color";
 
 /* ═══════════════════════════════════════════════════════════
    TYPES
@@ -36,19 +40,42 @@ interface CartContextValue {
   itemCount: number;
 }
 
+/* ─── safe localStorage helpers ─── */
+function lsGet<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw !== null ? (JSON.parse(raw) as T) : fallback;
+  } catch { return fallback; }
+}
+function lsSet(key: string, value: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
 /* ═══════════════════════════════════════════════════════════
    CONTEXT
 ═══════════════════════════════════════════════════════════ */
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems]         = useState<CartItem[]>([]);
-  const [floorKind, setFloorKind] = useState("oak");
-  const [wallColorId, setWallColorId] = useState("white");
+  const [items, setItemsRaw]         = useState<CartItem[]>(() => lsGet<CartItem[]>(LS_ITEMS, []));
+  const [floorKind, setFloorKindRaw] = useState<string>(() => lsGet<string>(LS_FLOOR, "oak"));
+  const [wallColorId, setWallRaw]    = useState<string>(() => lsGet<string>(LS_WALL, "white"));
 
-  const addItem    = useCallback((item: CartItem) => setItems(prev => [...prev, item]), []);
-  const removeItem = useCallback((id: string)     => setItems(prev => prev.filter(i => i.id !== id)), []);
-  const clearItems = useCallback(()               => setItems([]), []);
+  /* Sync to localStorage on every change */
+  useEffect(() => { lsSet(LS_ITEMS, items); }, [items]);
+  useEffect(() => { lsSet(LS_FLOOR, floorKind); }, [floorKind]);
+  useEffect(() => { lsSet(LS_WALL, wallColorId); }, [wallColorId]);
+
+  const addItem = useCallback((item: CartItem) =>
+    setItemsRaw(prev => [...prev, item]), []);
+
+  const removeItem = useCallback((id: string) =>
+    setItemsRaw(prev => prev.filter(i => i.id !== id)), []);
+
+  const clearItems = useCallback(() => setItemsRaw([]), []);
+
+  const setFloorKind  = useCallback((k: string) => setFloorKindRaw(k), []);
+  const setWallColorId = useCallback((id: string) => setWallRaw(id), []);
 
   const furnitureTotal = items.reduce((s, i) => s + i.price, 0);
   const floorTotal     = ROOM_AREA_M2 * (FLOOR_MAT_MAP.get(floorKind)?.pricePerM2 ?? 45);
