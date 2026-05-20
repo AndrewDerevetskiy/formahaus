@@ -1,239 +1,423 @@
-import { useEffect, useState } from "react";
-import { Link, useParams, useLocation } from "wouter";
-import { useCart } from "../context/CartContext";
-import { API_BASE } from "../lib/api";
+import { Link, useParams } from "wouter";
 import NavBar from "../components/NavBar";
+import {
+  PRODUCT_BY_ID_MAP,
+  PRODUCT_MAP,
+  VENDOR_MAP,
+  type MarketplaceProduct,
+} from "../data/products";
+import { useCart } from "../context/CartContext";
 
-interface Product {
-  id: number;
-  name: string;
-  description: string;
-  price: number;
-  image_url: string;
-  category_id: string;
-  category_name: string;
-  designer_type: string;
-  vendor_name: string;
-  model_path: string;
+function money(value: number) {
+  return `$${Number(value).toLocaleString("en-US")}`;
+}
+
+function getProductFromParam(id?: string): MarketplaceProduct | undefined {
+  if (!id) return undefined;
+
+  /* New marketplace product id: prod_sofa_001 */
+  const byProductId = PRODUCT_BY_ID_MAP.get(id);
+  if (byProductId) return byProductId;
+
+  /* Backward compatibility: old links like /product/sofa */
+  const byDesignerType = PRODUCT_MAP.get(id);
+  if (byDesignerType) return byDesignerType;
+
+  return undefined;
 }
 
 export default function ProductPage() {
   const params = useParams<{ id: string }>();
-  const [, navigate] = useLocation();
-  const productId = params.id;
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [added, setAdded] = useState(false);
-  const { addItem } = useCart();
+  const cart = useCart();
+  const product = getProductFromParam(params.id);
 
-  useEffect(() => {
-    fetch(`${API_BASE}/api/products/${productId}`)
-      .then(r => r.json())
-      .then(data => { setProduct(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [productId]);
+  if (!product) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#F8FAFC" }}>
+        <NavBar activePage="store" />
+        <main style={{
+          maxWidth: 900,
+          margin: "0 auto",
+          padding: "70px 18px",
+          fontFamily: "'Inter',system-ui,sans-serif",
+          textAlign: "center",
+        }}>
+          <div style={{ fontSize: 54, marginBottom: 12 }}>🔎</div>
+          <h1 style={{ margin: 0, color: "#0F172A", fontSize: 32, fontWeight: 950 }}>
+            Товар не знайдено
+          </h1>
+          <p style={{ color: "#64748B", fontSize: 15, margin: "12px 0 24px" }}>
+            Можливо, товар був видалений або ще не пройшов модерацію.
+          </p>
+          <Link href="/" style={{ textDecoration: "none" }}>
+            <button style={primaryBtn}>Повернутися в каталог</button>
+          </Link>
+        </main>
+      </div>
+    );
+  }
 
-  function handleAddToCart() {
-    if (!product) return;
-    addItem({
-      id: String(product.id),
-      type: product.designer_type || "furniture",
-      label: product.name,
-      price: Number(product.price),
-      icon: "🛋️",
+  const vendor = VENDOR_MAP.get(product.vendorId);
+  const mainImg = product.imageUrl || "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1000&q=85";
+  const commission = Math.round(product.price * (product.commissionPercent / 100));
+  const vendorRevenue = product.price - commission;
+
+  function addToCart() {
+    cart.addItem({
+      id: `${product.id}-${Date.now()}`,
+      type: product.designerType,
+      label: product.nameUa,
+      price: product.price,
+      icon: product.icon,
     });
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
   }
-
-  function handleTry3D() {
-    if (!product) return;
-    /* If the vendor uploaded a real GLB file, pass its URL to the designer */
-    if (product.model_path) {
-      const modelUrl = product.model_path.startsWith("http")
-        ? product.model_path
-        : `${window.location.origin}${product.model_path}`;
-      navigate(
-        `/designer?modelUrl=${encodeURIComponent(modelUrl)}&label=${encodeURIComponent(product.name)}&price=${encodeURIComponent(product.price)}`
-      );
-      return;
-    }
-    /* Otherwise use the built-in designer_type */
-    if (product.designer_type) {
-      navigate(`/designer?add=${encodeURIComponent(product.designer_type)}`);
-      return;
-    }
-    navigate("/designer");
-  }
-
-  if (loading) return (
-    <div style={{ background: "#fff", minHeight: "100vh", fontFamily: "'Inter',system-ui,sans-serif" }}>
-      <NavBar />
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 32px" }}>
-        <SkeletonDetail />
-      </div>
-    </div>
-  );
-
-  if (!product) return (
-    <div style={{ background: "#fff", minHeight: "100vh", fontFamily: "'Inter',system-ui,sans-serif" }}>
-      <NavBar />
-      <div style={{ textAlign: "center", padding: 120, color: "#888" }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: "#333", marginBottom: 8 }}>Товар не знайдено</div>
-        <Link href="/" style={{ color: "#2563EB", fontSize: 14 }}>← Повернутись до каталогу</Link>
-      </div>
-    </div>
-  );
-
-  const imgSrc = product.image_url?.startsWith("http") ? product.image_url : `${API_BASE}${product.image_url}`;
 
   return (
-    <div style={{ background: "#fff", minHeight: "100vh", fontFamily: "'Inter',system-ui,sans-serif" }}>
-      <NavBar />
+    <div style={{ minHeight: "100vh", background: "#F8FAFC" }}>
+      <NavBar activePage="store" />
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 32px" }}>
-        {/* Breadcrumb */}
-        <nav style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 40, fontSize: 14 }}>
-          <Link href="/" style={{ color: "#888", textDecoration: "none" }}>Магазин</Link>
-          <span style={{ color: "#DDD" }}>›</span>
-          <Link href={`/category/${product.category_id}`} style={{ color: "#888", textDecoration: "none" }}>
-            {product.category_name || product.category_id}
-          </Link>
-          <span style={{ color: "#DDD" }}>›</span>
-          <span style={{ color: "#111", fontWeight: 600 }}>{product.name}</span>
-        </nav>
+      <main style={{
+        maxWidth: 1220,
+        margin: "0 auto",
+        padding: "28px 18px 70px",
+        fontFamily: "'Inter',system-ui,sans-serif",
+      }}>
+        <div style={{
+          display: "flex",
+          gap: 8,
+          alignItems: "center",
+          color: "#64748B",
+          fontSize: 13,
+          fontWeight: 700,
+          marginBottom: 18,
+          flexWrap: "wrap",
+        }}>
+          <Link href="/" style={{ color: "#2563EB", textDecoration: "none" }}>Каталог</Link>
+          <span>/</span>
+          <span>{categoryLabel(product.category)}</span>
+          <span>/</span>
+          <span style={{ color: "#0F172A" }}>{product.nameUa}</span>
+        </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 72, alignItems: "start" }}>
-          {/* Left: image */}
-          <div style={{ borderRadius: 24, overflow: "hidden", background: "#F7F6F4", aspectRatio: "1", boxShadow: "0 4px 24px rgba(0,0,0,.07)" }}>
-            <img
-              src={imgSrc}
-              alt={product.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              onError={e => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=700&q=70"; }}
-            />
+        <section style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0,1.05fr) minmax(340px,.95fr)",
+          gap: 22,
+        }} className="fh-product-grid">
+          {/* Gallery */}
+          <div style={{
+            background: "#fff",
+            border: "1px solid #E2E8F0",
+            borderRadius: 26,
+            padding: 14,
+            boxShadow: "0 16px 45px rgba(15,23,42,.06)",
+          }}>
+            <div style={{
+              position: "relative",
+              borderRadius: 22,
+              overflow: "hidden",
+              background: "#F1F5F9",
+              minHeight: 420,
+            }}>
+              <img
+                src={mainImg}
+                alt={product.nameUa}
+                style={{ width: "100%", height: "100%", minHeight: 420, objectFit: "cover", display: "block" }}
+              />
+
+              <div style={{ position: "absolute", top: 14, left: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {product.isPromoted && <Badge bg="#FEF3C7" color="#92400E">ТОП продажів</Badge>}
+                {product.has3DModel && <Badge bg="#DBEAFE" color="#1D4ED8">⬡ Є 3D модель</Badge>}
+                <Badge bg={product.stock > 0 ? "#DCFCE7" : "#FEE2E2"} color={product.stock > 0 ? "#166534" : "#991B1B"}>
+                  {product.stock > 0 ? `В наявності: ${product.stock}` : "Немає в наявності"}
+                </Badge>
+              </div>
+            </div>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4,1fr)",
+              gap: 10,
+              marginTop: 12,
+            }}>
+              {[mainImg, ...(product.gallery || [])].slice(0, 4).map((img, idx) => (
+                <div key={idx} style={{
+                  border: "1.5px solid #E2E8F0",
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  aspectRatio: "1.2",
+                  background: "#F8FAFC",
+                }}>
+                  <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Right: info */}
-          <div style={{ paddingTop: 8 }}>
-            {product.vendor_name && (
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: "#2563EB", marginBottom: 14 }}>
-                {product.vendor_name}
-              </div>
-            )}
+          {/* Info */}
+          <aside style={{
+            background: "#fff",
+            border: "1px solid #E2E8F0",
+            borderRadius: 26,
+            padding: 22,
+            boxShadow: "0 16px 45px rgba(15,23,42,.06)",
+            alignSelf: "start",
+          }}>
+            <div style={{ color: "#2563EB", fontSize: 12, fontWeight: 950, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 8 }}>
+              {product.icon} {categoryLabel(product.category)}
+            </div>
 
-            <h1 style={{ fontSize: 34, fontWeight: 900, color: "#111", margin: "0 0 12px", lineHeight: 1.15 }}>
-              {product.name}
+            <h1 style={{
+              margin: 0,
+              color: "#0F172A",
+              fontSize: "clamp(28px,4vw,42px)",
+              lineHeight: 1.05,
+              fontWeight: 950,
+              letterSpacing: "-1px",
+            }}>
+              {product.nameUa}
             </h1>
 
-            <div style={{ fontSize: 13, color: "#2563EB", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 18 }}>
-              {product.category_name || product.category_id}
-            </div>
-
-            <p style={{ fontSize: 15, color: "#555", lineHeight: 1.75, margin: "0 0 28px" }}>
-              {product.description}
+            <p style={{ margin: "12px 0 0", color: "#64748B", fontSize: 15, lineHeight: 1.65 }}>
+              {product.descUa}
             </p>
 
-            {/* Price */}
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, margin: "0 0 36px" }}>
-              <span style={{ fontSize: 40, fontWeight: 900, color: "#111" }}>
-                ${Number(product.price).toLocaleString()}
-              </span>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginTop: 16,
+              flexWrap: "wrap",
+              color: "#475569",
+              fontSize: 13,
+              fontWeight: 800,
+            }}>
+              <span>⭐ {product.rating} / 5</span>
+              <span>•</span>
+              <span>{product.reviewsCount} відгуків</span>
+              <span>•</span>
+              <span>{product.salesCount} продажів</span>
             </div>
 
-            {/* CTA buttons */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{
+              marginTop: 22,
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: 18,
+              padding: "18px 0",
+              borderTop: "1px solid #F1F5F9",
+              borderBottom: "1px solid #F1F5F9",
+            }}>
+              <div>
+                {product.oldPrice && (
+                  <div style={{ color: "#94A3B8", fontSize: 16, fontWeight: 800, textDecoration: "line-through" }}>
+                    {money(product.oldPrice)}
+                  </div>
+                )}
+                <div style={{ color: "#0F172A", fontSize: 38, fontWeight: 950, lineHeight: 1 }}>
+                  {money(product.price)}
+                </div>
+              </div>
+              <div style={{ textAlign: "right", color: "#64748B", fontSize: 12, fontWeight: 800 }}>
+                SKU<br /><span style={{ color: "#0F172A" }}>{product.sku}</span>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 18 }} className="fh-action-grid">
               <button
-                onClick={handleAddToCart}
+                onClick={addToCart}
+                disabled={product.stock <= 0}
                 style={{
-                  height: 54,
-                  borderRadius: 14,
-                  background: added ? "#16A34A" : "#2563EB",
-                  color: "#fff",
-                  border: "none",
-                  fontSize: 16,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "background .2s",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
+                  ...primaryBtn,
+                  opacity: product.stock > 0 ? 1 : .55,
+                  cursor: product.stock > 0 ? "pointer" : "not-allowed",
                 }}
               >
-                {added ? "✓ Додано в кошик!" : "🛒 Додати в кошик"}
+                Додати в кошик
               </button>
 
-              {product.designer_type && (
-                <button
-                  onClick={handleTry3D}
-                  style={{
-                    height: 54,
-                    borderRadius: 14,
-                    background: "#fff",
-                    color: "#111",
-                    border: "1.5px solid #E0E0E0",
-                    fontSize: 16,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 8,
-                    transition: "border-color .15s, background .15s",
-                  }}
-                  onMouseEnter={e => { (e.target as HTMLButtonElement).style.borderColor = "#2563EB"; (e.target as HTMLButtonElement).style.color = "#2563EB"; }}
-                  onMouseLeave={e => { (e.target as HTMLButtonElement).style.borderColor = "#E0E0E0"; (e.target as HTMLButtonElement).style.color = "#111"; }}
-                >
-                  <span style={{ fontSize: 20 }}>⬡</span> Приміряти у 3D
-                </button>
-              )}
-
-              <Link href="/cart" style={{ textDecoration: "none" }}>
-                <button style={{ height: 44, borderRadius: 12, background: "#F7F7F7", color: "#555", border: "1px solid #E8E8E8", fontSize: 14, fontWeight: 600, cursor: "pointer", width: "100%" }}>
-                  Переглянути кошик
+              <Link href={`/designer?add=${product.designerType}`} style={{ textDecoration: "none" }}>
+                <button style={secondaryBtn}>
+                  ⬡ Відкрити у 3D
                 </button>
               </Link>
             </div>
 
-            {/* Vendor badge */}
-            {product.vendor_name && (
-              <div style={{ marginTop: 32, padding: "16px 20px", background: "#F8F9FF", borderRadius: 14, border: "1px solid #E8EDFF" }}>
-                <div style={{ fontSize: 12, color: "#888", marginBottom: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>Продавець</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#111" }}>{product.vendor_name}</div>
+            <Link href="/cart" style={{ textDecoration: "none" }}>
+              <button style={{
+                width: "100%",
+                marginTop: 10,
+                background: "#0F172A",
+                color: "#fff",
+                border: "none",
+                borderRadius: 14,
+                padding: "14px 18px",
+                fontSize: 15,
+                fontWeight: 950,
+                cursor: "pointer",
+              }}>
+                Перейти до кошика ({cart.itemCount})
+              </button>
+            </Link>
+
+            {/* Vendor card */}
+            <div style={{
+              marginTop: 20,
+              border: "1px solid #E2E8F0",
+              background: "#F8FAFC",
+              borderRadius: 20,
+              padding: 16,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{
+                  width: 50,
+                  height: 50,
+                  borderRadius: 16,
+                  background: "#DBEAFE",
+                  color: "#2563EB",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 22,
+                  fontWeight: 950,
+                }}>
+                  {(vendor?.name || product.vendorName).slice(0,1)}
+                </div>
+                <div>
+                  <div style={{ color: "#0F172A", fontSize: 16, fontWeight: 950 }}>
+                    {vendor?.name || product.vendorName}
+                  </div>
+                  <div style={{ color: "#64748B", fontSize: 13, marginTop: 2 }}>
+                    📍 {product.vendorCity} · ⭐ {vendor?.rating ?? product.rating} ({vendor?.reviewsCount ?? product.reviewsCount})
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
+              <p style={{ color: "#64748B", fontSize: 13, lineHeight: 1.5, margin: "12px 0 0" }}>
+                {vendor?.description || "Перевірений продавець FormaHaus."}
+              </p>
+            </div>
+          </aside>
+        </section>
 
-        {/* Similar products link */}
-        <div style={{ marginTop: 64, paddingTop: 40, borderTop: "1px solid #F0F0F0", textAlign: "center" }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#111", marginBottom: 16 }}>
-            Більше товарів у категорії «{product.category_name || product.category_id}»
-          </div>
-          <Link href={`/category/${product.category_id}`} style={{ textDecoration: "none" }}>
-            <button style={{ background: "#2563EB", color: "#fff", border: "none", borderRadius: 12, padding: "12px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
-              Переглянути усі →
-            </button>
-          </Link>
-        </div>
-      </div>
+        <section style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 18,
+          marginTop: 22,
+        }} className="fh-details-grid">
+          <InfoCard title="Доставка">
+            {product.deliveryOptions.map(d => (
+              <div key={d.id} style={rowStyle}>
+                <span>{d.label}</span>
+                <b>від {d.priceFrom === 0 ? "0" : `${d.priceFrom} грн`} · {d.estimatedDays}</b>
+              </div>
+            ))}
+          </InfoCard>
+
+          <InfoCard title="Умови продажу">
+            <div style={rowStyle}><span>Гарантія</span><b>{product.warrantyMonths} міс.</b></div>
+            <div style={rowStyle}><span>Продавець</span><b>{product.vendorName}</b></div>
+            <div style={rowStyle}><span>Статус товару</span><b>{product.status === "approved" ? "Підтверджено" : product.status}</b></div>
+            <div style={rowStyle}><span>Комісія платформи</span><b>{money(commission)}</b></div>
+            <div style={rowStyle}><span>Виплата продавцю</span><b>{money(vendorRevenue)}</b></div>
+          </InfoCard>
+        </section>
+      </main>
+
+      <style>{`
+        @media (max-width: 900px) {
+          .fh-product-grid { grid-template-columns: 1fr !important; }
+          .fh-details-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 560px) {
+          .fh-action-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }
 
-function SkeletonDetail() {
+function Badge({ children, bg, color }: { children: React.ReactNode; bg: string; color: string }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 72 }}>
-      <div style={{ borderRadius: 24, background: "#F0F0F0", aspectRatio: "1", animation: "pulse 1.5s ease-in-out infinite" }} />
-      <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 8 }}>
-        <div style={{ width: "30%", height: 12, background: "#F0F0F0", borderRadius: 6 }} />
-        <div style={{ width: "80%", height: 32, background: "#F0F0F0", borderRadius: 8 }} />
-        <div style={{ width: "60%", height: 16, background: "#F0F0F0", borderRadius: 6 }} />
-        <div style={{ width: "100%", height: 80, background: "#F0F0F0", borderRadius: 8 }} />
-        <div style={{ width: "40%", height: 48, background: "#F0F0F0", borderRadius: 8 }} />
+    <span style={{
+      background: bg,
+      color,
+      borderRadius: 999,
+      padding: "7px 10px",
+      fontSize: 11,
+      fontWeight: 950,
+      boxShadow: "0 6px 18px rgba(15,23,42,.08)",
+    }}>
+      {children}
+    </span>
+  );
+}
+
+function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{
+      background: "#fff",
+      border: "1px solid #E2E8F0",
+      borderRadius: 24,
+      padding: 20,
+      boxShadow: "0 12px 35px rgba(15,23,42,.05)",
+    }}>
+      <h2 style={{ margin: "0 0 14px", color: "#0F172A", fontSize: 20, fontWeight: 950 }}>
+        {title}
+      </h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {children}
       </div>
     </div>
   );
 }
+
+function categoryLabel(category: string) {
+  const map: Record<string, string> = {
+    seating: "Дивани та крісла",
+    tables: "Столи",
+    storage: "Зберігання",
+    lighting: "Освітлення",
+    decor: "Декор",
+    flooring: "Підлога",
+    wall: "Стіни",
+  };
+  return map[category] || category;
+}
+
+const primaryBtn: React.CSSProperties = {
+  width: "100%",
+  background: "#2563EB",
+  color: "#fff",
+  border: "none",
+  borderRadius: 14,
+  padding: "14px 18px",
+  fontSize: 15,
+  fontWeight: 950,
+  cursor: "pointer",
+  boxShadow: "0 14px 30px rgba(37,99,235,.20)",
+};
+
+const secondaryBtn: React.CSSProperties = {
+  width: "100%",
+  background: "#fff",
+  color: "#2563EB",
+  border: "1.5px solid #BFDBFE",
+  borderRadius: 14,
+  padding: "14px 18px",
+  fontSize: 15,
+  fontWeight: 950,
+  cursor: "pointer",
+};
+
+const rowStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  alignItems: "center",
+  padding: "11px 0",
+  borderBottom: "1px solid #F1F5F9",
+  color: "#64748B",
+  fontSize: 14,
+};

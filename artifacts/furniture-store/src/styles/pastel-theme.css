@@ -1,0 +1,146 @@
+/* FORMAHAUS PASTEL THEME
+   Додати файл у src/styles/pastel-theme.css
+   І імпортувати після responsive.css:
+
+   import "./styles/responsive.css";
+   import "./styles/pastel-theme.css";
+*/
+
+:root {
+  --fh-bg: #fbf8f3;
+  --fh-bg-soft: #f6efe7;
+  --fh-card: #ffffff;
+  --fh-text: #2f2a25;
+  --fh-muted: #756b61;
+  --fh-border: #eadfd2;
+
+  --fh-primary: #b78b66;
+  --fh-primary-dark: #8d674b;
+  --fh-primary-soft: #efe0d1;
+
+  --fh-accent: #9ea889;
+  --fh-accent-soft: #edf1e7;
+
+  --fh-dark: #342c25;
+  --fh-shadow: 0 18px 55px rgba(80, 55, 35, 0.10);
+}
+
+body {
+  background: var(--fh-bg) !important;
+  color: var(--fh-text) !important;
+}
+
+/* Основні сторінки */
+main,
+section {
+  color: var(--fh-text);
+}
+
+/* Навбар */
+.fh-navbar {
+  background: rgba(52, 44, 37, 0.94) !important;
+  border-bottom-color: rgba(255,255,255,.10) !important;
+}
+
+.fh-navbar-logo {
+  background: linear-gradient(135deg, #b78b66, #342c25) !important;
+  box-shadow: 0 12px 30px rgba(183, 139, 102, .24) !important;
+}
+
+.fh-navbar-name span {
+  color: #e8c9ad !important;
+}
+
+.fh-nav-link.active {
+  background: rgba(183,139,102,.16) !important;
+  color: #f1d7bf !important;
+  box-shadow: inset 0 -2px 0 #b78b66 !important;
+}
+
+.fh-login-button,
+.fh-cart-count {
+  background: #b78b66 !important;
+}
+
+.fh-cart-button {
+  background: rgba(255,255,255,.09) !important;
+}
+
+/* Універсальні кнопки */
+button {
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+/* Синій → пастельний */
+[style*="#2563EB"],
+[style*="#1D4ED8"],
+[style*="#DBEAFE"],
+[style*="#BFDBFE"],
+[style*="#EFF6FF"],
+[style*="#60A5FA"],
+[style*="#93C5FD"] {
+  /* inline style повністю не перебивається без !important на конкретні властивості */
+}
+
+/* Часті класи */
+.fh-cart-btn,
+.fh-checkout-btn,
+.fh-ai-btn,
+.ai,
+.checkout,
+.saveBtn,
+.cartBtn {
+  background: var(--fh-primary) !important;
+  border-color: var(--fh-primary) !important;
+  color: #fff !important;
+}
+
+.fh-soft-btn,
+.fh-selected-actions button,
+.fh-canvas-actions button,
+.fh-tabs button.active,
+.tabs button.active {
+  border-color: var(--fh-border) !important;
+}
+
+.fh-panel,
+.panel,
+.fh-canvas-toolbar,
+.toolbar,
+.fh-current-material,
+.current,
+.fh-summary-card,
+.summary,
+.fh-product-card,
+.productCard,
+.floorCard,
+.wallCard {
+  border-color: var(--fh-border) !important;
+  box-shadow: var(--fh-shadow);
+}
+
+.fh-product-card:hover,
+.productCard:hover,
+.floorCard.active,
+.wallCard.active {
+  border-color: var(--fh-primary) !important;
+  box-shadow: 0 0 0 3px rgba(183,139,102,.14), var(--fh-shadow) !important;
+}
+
+.fh-category-row button.active,
+.chips button.active {
+  background: var(--fh-primary) !important;
+  border-color: var(--fh-primary) !important;
+  color: #fff !important;
+}
+
+/* Мобільний фон */
+@media (max-width: 768px) {
+  body {
+    background: var(--fh-bg) !important;
+  }
+}

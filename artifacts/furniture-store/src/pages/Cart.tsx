@@ -1,389 +1,459 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
-import {
-  ShoppingCart, Trash2, ArrowLeft, Box, ChevronRight,
-  CheckCircle2, Package, Paintbrush, Layers,
-} from "lucide-react";
-import { useCart, FLOOR_MATERIALS, WALL_COLORS, ROOM_AREA_M2 } from "../context/CartContext";
+import NavBar from "../components/NavBar";
+import { useCart } from "../context/CartContext";
 
-/* ─── format ─────────────────────────────────────────────── */
-const fmt = (n: number) =>
-  n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
+type DeliveryMethod = "nova_poshta" | "ukrposhta" | "courier" | "pickup";
+type PaymentMethod = "cod" | "card_later" | "bank_transfer" | "cash";
 
-/* ─── Category icon map ───────────────────────────────────── */
-const CAT_ICON: Record<string, string> = {
-  sofa: "🛋️", armchair: "💺", bench: "🪑",
-  coffee: "☕", dining: "🍽️", side: "🔲",
-  bookshelf: "📚", cabinet: "🗄️",
-  floorlamp: "💡", pendant: "🔦",
-  plant: "🌿", rug_classic: "🟫", rug_round: "⭕", rug_runner: "▬",
+type OrderStatus = "new" | "confirmed" | "completed" | "cancelled";
+
+type SavedOrder = {
+  id: string;
+  status: OrderStatus;
+  customer: {
+    name: string;
+    phone: string;
+    city: string;
+    address: string;
+    comment: string;
+  };
+  delivery: {
+    method: DeliveryMethod;
+    label: string;
+    price: number;
+  };
+  payment: {
+    method: PaymentMethod;
+    label: string;
+  };
+  items: Array<{
+    id: string;
+    type: string;
+    label: string;
+    price: number;
+    quantity: number;
+  }>;
+  totals: {
+    itemsTotal: number;
+    floorTotal: number;
+    wallTotal: number;
+    deliveryTotal: number;
+    grandTotal: number;
+  };
+  roomMaterials: {
+    floorKind: string;
+    wallColorId: string;
+  };
+  createdAt: string;
 };
 
-/* ─── Checkout Modal ──────────────────────────────────────── */
-function CheckoutModal({ onClose }: { onClose: () => void }) {
-  const { items, floorKind, wallColorId, furnitureTotal, floorTotal, wallTotal, grandTotal } = useCart();
-  const [done, setDone] = useState(false);
+const LS_ORDERS = "formahaus_orders";
 
-  if (done) return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl p-10 max-w-md w-full text-center shadow-2xl">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 size={40} className="text-green-600" />
-        </div>
-        <h2 className="text-2xl font-black text-gray-900 mb-3">Замовлення прийнято!</h2>
-        <p className="text-gray-500 mb-2">Дякуємо за покупку у FormaHaus.</p>
-        <p className="text-gray-400 text-sm mb-8">Менеджер зв'яжеться з вами протягом 24 годин для підтвердження та узгодження доставки.</p>
-        <div className="bg-gray-50 rounded-2xl p-4 mb-8 text-left">
-          <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Підсумок замовлення</div>
-          <div className="flex justify-between text-sm text-gray-700 mb-1"><span>Меблі ({items.length} шт.)</span><span className="font-bold">{fmt(furnitureTotal)}</span></div>
-          <div className="flex justify-between text-sm text-gray-700 mb-1"><span>Оздоблення підлоги</span><span className="font-bold">{fmt(floorTotal)}</span></div>
-          <div className="flex justify-between text-sm text-gray-700 mb-3"><span>Оздоблення стін</span><span className="font-bold">{fmt(wallTotal)}</span></div>
-          <div className="border-t border-gray-200 pt-3 flex justify-between font-black text-gray-900"><span>Разом</span><span className="text-blue-600 text-lg">{fmt(grandTotal)}</span></div>
-        </div>
-        <Link href="/">
-          <button className="w-full h-12 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-700 transition-colors" onClick={onClose}>
-            На головну
-          </button>
-        </Link>
-      </div>
-    </div>
-  );
+const DELIVERY_OPTIONS: Record<DeliveryMethod, { label: string; price: number; description: string }> = {
+  nova_poshta: {
+    label: "Нова пошта",
+    price: 180,
+    description: "Доставка у відділення або поштомат",
+  },
+  ukrposhta: {
+    label: "Укрпошта",
+    price: 95,
+    description: "Економна доставка по Україні",
+  },
+  courier: {
+    label: "Курʼєр",
+    price: 450,
+    description: "Доставка курʼєром по місту",
+  },
+  pickup: {
+    label: "Самовивіз",
+    price: 0,
+    description: "Самовивіз зі складу / магазину",
+  },
+};
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="bg-gray-900 px-8 py-6">
-          <h2 className="text-xl font-black text-white mb-1">Оформлення замовлення</h2>
-          <p className="text-gray-400 text-sm">Перевірте склад замовлення перед підтвердженням</p>
-        </div>
+const PAYMENT_OPTIONS: Record<PaymentMethod, { label: string; description: string }> = {
+  cod: {
+    label: "Оплата при отриманні",
+    description: "Покупець платить після огляду товару",
+  },
+  card_later: {
+    label: "Онлайн-оплата пізніше",
+    description: "Менеджер надішле посилання на оплату",
+  },
+  bank_transfer: {
+    label: "Оплата на рахунок ФОП / ТОВ",
+    description: "Для юридичних осіб або передплати",
+  },
+  cash: {
+    label: "Готівкою",
+    description: "При самовивозі або курʼєрській доставці",
+  },
+};
 
-        <div className="p-8 max-h-[60vh] overflow-y-auto">
-          {/* Furniture list */}
-          {items.length > 0 && (
-            <div className="mb-6">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">
-                <Package size={14} /> Меблі та декор
-              </div>
-              <div className="space-y-2">
-                {items.map(item => (
-                  <div key={item.id} className="flex items-center justify-between py-2 border-b border-gray-50">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{CAT_ICON[item.type] ?? "🛋️"}</span>
-                      <span className="text-sm font-semibold text-gray-800">{item.label}</span>
-                    </div>
-                    <span className="text-sm font-bold text-gray-900">{fmt(item.price)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Floor */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">
-              <Layers size={14} /> Підлога
-            </div>
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="font-semibold text-gray-800 text-sm">{FLOOR_MATERIALS.find(f=>f.id===floorKind)?.label}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{ROOM_AREA_M2} м² × {fmt(FLOOR_MATERIALS.find(f=>f.id===floorKind)?.pricePerM2 ?? 0)}/м²</div>
-                </div>
-                <div className="font-bold text-gray-900">{fmt(floorTotal)}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Walls */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">
-              <Paintbrush size={14} /> Стіни
-            </div>
-            <div className="bg-gray-50 rounded-xl p-4 flex justify-between items-center">
-              <div>
-                <div className="font-semibold text-gray-800 text-sm">{WALL_COLORS.find(w=>w.id===wallColorId)?.label}</div>
-                <div className="text-xs text-gray-400 mt-0.5">Фарбування 3 стін (~121 м²)</div>
-              </div>
-              <div className="font-bold text-gray-900">{fmt(wallTotal)}</div>
-            </div>
-          </div>
-
-          {/* Totals */}
-          <div className="border-t border-gray-100 pt-5 space-y-2">
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Меблі та декор</span><span className="font-semibold">{fmt(furnitureTotal)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Підлога</span><span className="font-semibold">{fmt(floorTotal)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-gray-600">
-              <span>Стіни</span><span className="font-semibold">{fmt(wallTotal)}</span>
-            </div>
-            <div className="flex justify-between text-lg font-black text-gray-900 pt-3 border-t border-gray-100">
-              <span>Разом</span>
-              <span className="text-blue-600">{fmt(grandTotal)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="px-8 pb-8 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 h-12 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:border-gray-400 transition-colors"
-          >
-            Назад
-          </button>
-          <button
-            onClick={() => setDone(true)}
-            className="flex-1 h-12 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-          >
-            Підтвердити замовлення
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+function money(value: number) {
+  return `${Number(value || 0).toLocaleString("uk-UA")} грн`;
 }
 
-/* ─── CART PAGE ───────────────────────────────────────────── */
+function loadOrders(): SavedOrder[] {
+  try {
+    const raw = localStorage.getItem(LS_ORDERS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveOrder(order: SavedOrder) {
+  const orders = loadOrders();
+  localStorage.setItem(LS_ORDERS, JSON.stringify([order, ...orders]));
+}
+
 export default function Cart() {
-  const {
-    items, removeItem, clearItems,
-    floorKind, wallColorId,
-    furnitureTotal, floorTotal, wallTotal, grandTotal,
-    itemCount,
-  } = useCart();
+  const cart = useCart();
 
-  const [checkout, setCheckout] = useState(false);
+  const [createdOrder, setCreatedOrder] = useState<SavedOrder | null>(null);
+  const [customer, setCustomer] = useState({
+    name: "",
+    phone: "",
+    city: "",
+    address: "",
+    comment: "",
+  });
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>("nova_poshta");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
+
+  const delivery = DELIVERY_OPTIONS[deliveryMethod];
+  const payment = PAYMENT_OPTIONS[paymentMethod];
+
+  const grandTotal = useMemo(() => {
+    return cart.grandTotal + delivery.price;
+  }, [cart.grandTotal, delivery.price]);
+
+  function updateCustomer(key: keyof typeof customer, value: string) {
+    setCustomer(prev => ({ ...prev, [key]: value }));
+  }
+
+  function submitOrder() {
+    if (!cart.items.length) {
+      alert("Кошик порожній");
+      return;
+    }
+
+    if (!customer.name.trim()) {
+      alert("Вкажіть імʼя покупця");
+      return;
+    }
+
+    if (!customer.phone.trim()) {
+      alert("Вкажіть телефон");
+      return;
+    }
+
+    if (!customer.city.trim()) {
+      alert("Вкажіть місто");
+      return;
+    }
+
+    if (deliveryMethod !== "pickup" && !customer.address.trim()) {
+      alert("Вкажіть адресу або відділення доставки");
+      return;
+    }
+
+    const order: SavedOrder = {
+      id: `FH-${Date.now().toString().slice(-8)}`,
+      status: "new",
+      customer,
+      delivery: {
+        method: deliveryMethod,
+        label: delivery.label,
+        price: delivery.price,
+      },
+      payment: {
+        method: paymentMethod,
+        label: payment.label,
+      },
+      items: cart.items.map(item => ({
+        id: item.id,
+        type: item.type,
+        label: item.label,
+        price: item.price,
+        quantity: 1,
+      })),
+      totals: {
+        itemsTotal: cart.furnitureTotal,
+        floorTotal: cart.floorTotal,
+        wallTotal: cart.wallTotal,
+        deliveryTotal: delivery.price,
+        grandTotal,
+      },
+      roomMaterials: {
+        floorKind: cart.floorKind,
+        wallColorId: cart.wallColorId,
+      },
+      createdAt: new Date().toISOString(),
+    };
+
+    saveOrder(order);
+    setCreatedOrder(order);
+    cart.clearItems();
+  }
+
+  if (createdOrder) {
+    return (
+      <div style={page}>
+        <NavBar activePage="cart" />
+
+        <main style={{ maxWidth: 760, margin: "0 auto", padding: "70px 18px" }}>
+          <section style={successCard}>
+            <div style={successIcon}>✓</div>
+            <h1 style={successTitle}>Замовлення створено</h1>
+            <p style={successText}>
+              Заявка збережена. Тепер її можна побачити в кабінеті продавця в розділі замовлень.
+            </p>
+
+            <div style={successGrid}>
+              <InfoBox label="Номер" value={createdOrder.id} />
+              <InfoBox label="Статус" value="Нове" />
+              <InfoBox label="Покупець" value={createdOrder.customer.name} />
+              <InfoBox label="Телефон" value={createdOrder.customer.phone} />
+              <InfoBox label="Доставка" value={createdOrder.delivery.label} />
+              <InfoBox label="Оплата" value={createdOrder.payment.label} />
+              <InfoBox label="Сума" value={money(createdOrder.totals.grandTotal)} />
+              <InfoBox label="Місто" value={createdOrder.customer.city} />
+            </div>
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 22 }}>
+              <Link href="/" style={{ textDecoration: "none" }}>
+                <button style={secondaryBtn}>До каталогу</button>
+              </Link>
+              <Link href="/vendor/dashboard" style={{ textDecoration: "none" }}>
+                <button style={primaryBtn}>Кабінет продавця</button>
+              </Link>
+            </div>
+          </section>
+        </main>
+
+        <style>{`
+          @media (max-width: 620px) {
+            .success-grid { grid-template-columns: 1fr !important; }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
-      {checkout && <CheckoutModal onClose={() => setCheckout(false)} />}
+    <div style={page}>
+      <NavBar activePage="cart" />
 
-      {/* ── NAV ── */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/">
-            <span className="text-xl font-black tracking-widest text-gray-900 cursor-pointer select-none">
-              FORMA<span className="font-light text-blue-600">HAUS</span>
-            </span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/designer">
-              <button className="flex items-center gap-2 px-4 h-9 rounded-lg bg-gray-900 text-white text-sm font-semibold hover:bg-gray-700 transition-colors">
-                <Box size={15} /> 3D Designer
-              </button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        {/* Page title */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/">
-            <button className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 hover:border-gray-400 transition-colors text-gray-500">
-              <ArrowLeft size={16} />
-            </button>
-          </Link>
+      <main style={{ maxWidth: 1180, margin: "0 auto", padding: "28px 18px 72px" }}>
+        <div style={pageHead}>
           <div>
-            <h1 className="text-3xl font-black text-gray-900">Кошик</h1>
-            <p className="text-sm text-gray-400 mt-0.5">
-              {itemCount > 0 ? `${itemCount} меблів + підлога + стіни` : "Кошик порожній"}
-            </p>
+            <h1 style={title}>Оформлення замовлення</h1>
+            <p style={subtitle}>Перевірте товари, оберіть доставку та спосіб оплати.</p>
           </div>
+
+          <Link href="/" style={{ textDecoration: "none" }}>
+            <button style={secondaryBtn}>Продовжити покупки</button>
+          </Link>
         </div>
 
-        {itemCount === 0 && (
-          /* ── EMPTY STATE ── */
-          <div className="bg-white rounded-3xl p-16 text-center">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <ShoppingCart size={36} className="text-gray-300" />
-            </div>
-            <h2 className="text-xl font-black text-gray-900 mb-2">Кошик порожній</h2>
-            <p className="text-gray-400 text-sm mb-8 max-w-xs mx-auto">
-              Відкрийте 3D-дизайнер, розставте меблі в кімнаті — вони автоматично з'являться тут.
-            </p>
-            <Link href="/designer">
-              <button className="flex items-center gap-2 px-8 h-12 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors mx-auto">
-                <Box size={16} /> Відкрити 3D Designer
-              </button>
+        {cart.items.length === 0 ? (
+          <section style={emptyCard}>
+            <div style={{ fontSize: 54, marginBottom: 12 }}>🛒</div>
+            <h2 style={{ margin: 0, color: "#0F172A", fontSize: 30, fontWeight: 950 }}>Кошик порожній</h2>
+            <p style={{ color: "#64748B", margin: "10px 0 22px" }}>Додайте товари з каталогу або з 3D редактора.</p>
+            <Link href="/" style={{ textDecoration: "none" }}>
+              <button style={primaryBtn}>До каталогу</button>
             </Link>
-          </div>
-        )}
-
-        {itemCount > 0 && (
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
-            {/* ── LEFT: line items ── */}
-            <div className="flex-1 space-y-4">
-
-              {/* Furniture section */}
-              <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
-                <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Package size={16} className="text-blue-600" />
-                    <span className="text-sm font-black text-gray-900">Меблі та декор</span>
-                    <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">{itemCount}</span>
-                  </div>
-                  <button
-                    onClick={clearItems}
-                    className="text-xs font-semibold text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    Очистити все
-                  </button>
-                </div>
-
-                <div className="divide-y divide-gray-50">
-                  {items.map(item => (
-                    <div key={item.id} className="flex items-center gap-4 px-6 py-4">
-                      <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-2xl flex-shrink-0">
-                        {CAT_ICON[item.type] ?? "🛋️"}
+          </section>
+        ) : (
+          <section style={layout} className="checkout-layout">
+            <div style={{ display: "grid", gap: 16 }}>
+              <Panel title="Товари в замовленні">
+                <div style={{ display: "grid", gap: 10 }}>
+                  {cart.items.map(item => (
+                    <div key={item.id} style={itemRow}>
+                      <div style={itemIcon}>{String(item.icon || "Товар").slice(0, 2)}</div>
+                      <div>
+                        <div style={itemName}>{item.label}</div>
+                        <div style={itemMeta}>Тип: {item.type}</div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold text-gray-900 truncate">{item.label}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">Додано з 3D-редактора</div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={itemPrice}>{money(item.price)}</div>
+                        <button onClick={() => cart.removeItem(item.id)} style={removeBtn}>Видалити</button>
                       </div>
-                      <div className="text-base font-black text-gray-900 flex-shrink-0">
-                        {fmt(item.price)}
-                      </div>
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors flex-shrink-0"
-                      >
-                        <Trash2 size={15} />
-                      </button>
                     </div>
                   ))}
                 </div>
+              </Panel>
 
-                <div className="px-6 py-3 bg-gray-50 flex justify-between text-sm">
-                  <span className="text-gray-500 font-semibold">Підсумок меблів</span>
-                  <span className="font-black text-gray-900">{fmt(furnitureTotal)}</span>
-                </div>
-              </div>
+              <Panel title="Дані покупця">
+                <div style={formGrid} className="checkout-form-grid">
+                  <Field label="Імʼя">
+                    <input value={customer.name} onChange={e => updateCustomer("name", e.target.value)} placeholder="Ваше імʼя" style={input} />
+                  </Field>
 
-              {/* Floor section */}
-              <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
-                <div className="px-6 py-4 border-b border-gray-50 flex items-center gap-2">
-                  <Layers size={16} className="text-blue-600" />
-                  <span className="text-sm font-black text-gray-900">Оздоблення підлоги</span>
+                  <Field label="Телефон">
+                    <input value={customer.phone} onChange={e => updateCustomer("phone", e.target.value)} placeholder="+380..." style={input} />
+                  </Field>
+
+                  <Field label="Місто">
+                    <input value={customer.city} onChange={e => updateCustomer("city", e.target.value)} placeholder="Київ, Львів, Ірпінь..." style={input} />
+                  </Field>
+
+                  <Field label="Адреса / відділення">
+                    <input value={customer.address} onChange={e => updateCustomer("address", e.target.value)} placeholder="Відділення Нової пошти або адреса" style={input} />
+                  </Field>
                 </div>
-                <div className="px-6 py-4 flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-bold text-gray-900">
-                      {FLOOR_MATERIALS.find(f=>f.id===floorKind)?.label ?? floorKind}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      {ROOM_AREA_M2} м² × {fmt(FLOOR_MATERIALS.find(f=>f.id===floorKind)?.pricePerM2 ?? 0)}/м²
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-black text-gray-900">{fmt(floorTotal)}</div>
-                    <div className="text-xs text-gray-400">матеріал + укладання</div>
-                  </div>
-                </div>
-                <div className="px-6 pb-4">
-                  <Link href="/designer">
-                    <button className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                      Змінити матеріал у 3D-редакторі <ChevronRight size={12} />
+
+                <Field label="Коментар до замовлення">
+                  <textarea value={customer.comment} onChange={e => updateCustomer("comment", e.target.value)} placeholder="Побажання, уточнення, зручний час дзвінка..." style={{ ...input, minHeight: 86, resize: "vertical", marginTop: 6 }} />
+                </Field>
+              </Panel>
+
+              <Panel title="Доставка">
+                <div style={optionGrid}>
+                  {(Object.keys(DELIVERY_OPTIONS) as DeliveryMethod[]).map(key => (
+                    <button
+                      key={key}
+                      onClick={() => setDeliveryMethod(key)}
+                      style={deliveryMethod === key ? optionActive : optionBtn}
+                    >
+                      <b>{DELIVERY_OPTIONS[key].label}</b>
+                      <span>{DELIVERY_OPTIONS[key].description}</span>
+                      <strong>{DELIVERY_OPTIONS[key].price === 0 ? "Безкоштовно" : money(DELIVERY_OPTIONS[key].price)}</strong>
                     </button>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Wall section */}
-              <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
-                <div className="px-6 py-4 border-b border-gray-50 flex items-center gap-2">
-                  <Paintbrush size={16} className="text-blue-600" />
-                  <span className="text-sm font-black text-gray-900">Оздоблення стін</span>
-                </div>
-                <div className="px-6 py-4 flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-bold text-gray-900">
-                      {WALL_COLORS.find(w=>w.id===wallColorId)?.label ?? wallColorId}
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      Фарбування 3 стін, ~121 м²
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-black text-gray-900">{fmt(wallTotal)}</div>
-                    <div className="text-xs text-gray-400">матеріал + робота</div>
-                  </div>
-                </div>
-                <div className="px-6 pb-4">
-                  <Link href="/designer">
-                    <button className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                      Змінити колір у 3D-редакторі <ChevronRight size={12} />
-                    </button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* ── RIGHT: order summary ── */}
-            <div className="w-full lg:w-80 flex-shrink-0 sticky top-24">
-              <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-50">
-                  <h2 className="text-sm font-black text-gray-900">Підсумок замовлення</h2>
-                </div>
-
-                <div className="px-6 py-5 space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Меблі та декор ({itemCount} шт.)</span>
-                    <span className="font-semibold text-gray-800">{fmt(furnitureTotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Підлога ({ROOM_AREA_M2} м²)</span>
-                    <span className="font-semibold text-gray-800">{fmt(floorTotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Стіни</span>
-                    <span className="font-semibold text-gray-800">{fmt(wallTotal)}</span>
-                  </div>
-
-                  <div className="border-t border-gray-100 pt-3 flex justify-between">
-                    <span className="font-black text-gray-900">Разом</span>
-                    <span className="text-xl font-black text-blue-600">{fmt(grandTotal)}</span>
-                  </div>
-                </div>
-
-                <div className="px-6 pb-6 space-y-3">
-                  <button
-                    onClick={() => setCheckout(true)}
-                    className="w-full h-12 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    Checkout
-                    <ChevronRight size={16} />
-                  </button>
-                  <Link href="/designer">
-                    <button className="w-full h-11 border border-gray-200 text-sm font-semibold text-gray-600 rounded-xl hover:border-gray-400 transition-colors flex items-center justify-center gap-2">
-                      <Box size={15} /> Продовжити в 3D
-                    </button>
-                  </Link>
-                </div>
-
-                {/* Benefits */}
-                <div className="px-6 pb-6 space-y-2">
-                  {[
-                    { icon: "🚚", text: "Безкоштовна доставка від $500" },
-                    { icon: "🛡️", text: "Гарантія 3 роки на всі вироби" },
-                    { icon: "🔄", text: "Повернення протягом 30 днів" },
-                  ].map(b => (
-                    <div key={b.text} className="flex items-center gap-2 text-xs text-gray-400">
-                      <span>{b.icon}</span>
-                      <span>{b.text}</span>
-                    </div>
                   ))}
                 </div>
-              </div>
+              </Panel>
+
+              <Panel title="Оплата">
+                <div style={optionGrid}>
+                  {(Object.keys(PAYMENT_OPTIONS) as PaymentMethod[]).map(key => (
+                    <button
+                      key={key}
+                      onClick={() => setPaymentMethod(key)}
+                      style={paymentMethod === key ? optionActive : optionBtn}
+                    >
+                      <b>{PAYMENT_OPTIONS[key].label}</b>
+                      <span>{PAYMENT_OPTIONS[key].description}</span>
+                    </button>
+                  ))}
+                </div>
+              </Panel>
             </div>
-          </div>
+
+            <aside style={summary}>
+              <h2 style={{ margin: 0, color: "#0F172A", fontSize: 22, fontWeight: 950 }}>Разом</h2>
+
+              <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+                <SummaryRow label="Товари" value={money(cart.furnitureTotal)} />
+                <SummaryRow label="Підлога" value={money(cart.floorTotal)} />
+                <SummaryRow label="Стіни / обої" value={money(cart.wallTotal)} />
+                <SummaryRow label={`Доставка · ${delivery.label}`} value={delivery.price === 0 ? "Безкоштовно" : money(delivery.price)} />
+
+                <div style={totalLine}>
+                  <span>До оплати</span>
+                  <b>{money(grandTotal)}</b>
+                </div>
+              </div>
+
+              <div style={summaryNote}>
+                <b>Оплата:</b> {payment.label}<br />
+                <b>Доставка:</b> {delivery.description}
+              </div>
+
+              <button onClick={submitOrder} style={{ ...primaryBtn, width: "100%", marginTop: 16 }}>
+                Оформити замовлення
+              </button>
+
+              <button onClick={cart.clearItems} style={{ ...secondaryBtn, width: "100%", marginTop: 10, color: "#DC2626", borderColor: "#FECACA" }}>
+                Очистити кошик
+              </button>
+            </aside>
+          </section>
         )}
-      </div>
+      </main>
+
+      <style>{`
+        @media (max-width: 960px) {
+          .checkout-layout { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 700px) {
+          .checkout-form-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   );
 }
+
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section style={panel}>
+      <h2 style={panelTitle}>{title}</h2>
+      <div style={{ marginTop: 14 }}>{children}</div>
+    </section>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label style={{ display: "grid", gap: 6 }}>
+      <span style={{ color: "#334155", fontSize: 12, fontWeight: 900 }}>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={summaryRow}>
+      <span>{label}</span>
+      <b>{value}</b>
+    </div>
+  );
+}
+
+function InfoBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={infoBox}>
+      <span>{label}</span>
+      <b>{value}</b>
+    </div>
+  );
+}
+
+const page: React.CSSProperties = { minHeight: "100vh", background: "#F8FAFC", fontFamily: "'Inter',system-ui,sans-serif" };
+const pageHead: React.CSSProperties = { display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-end", flexWrap: "wrap", marginBottom: 22 };
+const title: React.CSSProperties = { margin: 0, color: "#0F172A", fontSize: "clamp(30px,4vw,46px)", fontWeight: 950, letterSpacing: "-1px" };
+const subtitle: React.CSSProperties = { color: "#64748B", margin: "8px 0 0", fontSize: 15 };
+const layout: React.CSSProperties = { display: "grid", gridTemplateColumns: "minmax(0,1fr) 380px", gap: 22, alignItems: "start" };
+const panel: React.CSSProperties = { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 24, padding: 18, boxShadow: "0 14px 40px rgba(15,23,42,.05)" };
+const panelTitle: React.CSSProperties = { margin: 0, color: "#0F172A", fontSize: 20, fontWeight: 950 };
+const itemRow: React.CSSProperties = { display: "grid", gridTemplateColumns: "58px 1fr auto", gap: 12, alignItems: "center", border: "1px solid #E2E8F0", borderRadius: 18, padding: 10 };
+const itemIcon: React.CSSProperties = { width: 58, height: 58, borderRadius: 16, background: "#EEF2FF", color: "#1D4ED8", display: "grid", placeItems: "center", fontSize: 12, fontWeight: 950 };
+const itemName: React.CSSProperties = { color: "#0F172A", fontSize: 15, fontWeight: 950 };
+const itemMeta: React.CSSProperties = { color: "#64748B", fontSize: 12, marginTop: 3 };
+const itemPrice: React.CSSProperties = { color: "#0F172A", fontSize: 17, fontWeight: 950 };
+const removeBtn: React.CSSProperties = { background: "transparent", border: "none", color: "#DC2626", fontSize: 12, fontWeight: 900, cursor: "pointer", marginTop: 4 };
+const formGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 };
+const input: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1.5px solid #E2E8F0", borderRadius: 14, padding: "12px 13px", fontSize: 14, color: "#0F172A", background: "#fff", outline: "none", fontFamily: "inherit" };
+const optionGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 10 };
+const optionBtn: React.CSSProperties = { background: "#fff", border: "1.5px solid #E2E8F0", borderRadius: 16, padding: 14, textAlign: "left", cursor: "pointer", display: "grid", gap: 5, color: "#334155" };
+const optionActive: React.CSSProperties = { ...optionBtn, borderColor: "#2563EB", boxShadow: "0 0 0 3px rgba(37,99,235,.12)", background: "#EFF6FF" };
+const summary: React.CSSProperties = { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 24, padding: 20, boxShadow: "0 16px 45px rgba(15,23,42,.06)", position: "sticky", top: 18 };
+const summaryRow: React.CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, color: "#64748B", fontSize: 14, fontWeight: 750 };
+const totalLine: React.CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", borderTop: "1px solid #E2E8F0", paddingTop: 14, marginTop: 6, color: "#0F172A", fontSize: 16, fontWeight: 950 };
+const summaryNote: React.CSSProperties = { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 16, padding: 13, color: "#64748B", fontSize: 13, lineHeight: 1.6, marginTop: 16 };
+const primaryBtn: React.CSSProperties = { background: "#2563EB", color: "#fff", border: "none", borderRadius: 14, padding: "13px 18px", fontSize: 14, fontWeight: 950, cursor: "pointer", boxShadow: "0 14px 30px rgba(37,99,235,.20)" };
+const secondaryBtn: React.CSSProperties = { background: "#fff", color: "#2563EB", border: "1.5px solid #BFDBFE", borderRadius: 14, padding: "13px 18px", fontSize: 14, fontWeight: 950, cursor: "pointer" };
+const emptyCard: React.CSSProperties = { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 28, padding: "70px 20px", textAlign: "center", boxShadow: "0 16px 45px rgba(15,23,42,.05)" };
+const successCard: React.CSSProperties = { background: "#fff", border: "1px solid #E2E8F0", borderRadius: 28, padding: "44px 22px", textAlign: "center", boxShadow: "0 20px 60px rgba(15,23,42,.08)" };
+const successIcon: React.CSSProperties = { width: 82, height: 82, borderRadius: "50%", background: "#DCFCE7", color: "#166534", display: "grid", placeItems: "center", fontSize: 44, margin: "0 auto 18px" };
+const successTitle: React.CSSProperties = { margin: 0, color: "#0F172A", fontSize: 34, fontWeight: 950 };
+const successText: React.CSSProperties = { color: "#64748B", fontSize: 15, lineHeight: 1.7, margin: "14px auto 24px", maxWidth: 540 };
+const successGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, textAlign: "left" };
+const infoBox: React.CSSProperties = { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 16, padding: 14, display: "grid", gap: 4 };

@@ -1,0 +1,261 @@
+/* FORMAHAUS RESPONSIVE 100%
+   Додати цей файл у src/styles/responsive.css
+   І імпортувати в src/main.tsx або src/App.tsx:
+   import "./styles/responsive.css";
+*/
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  margin: 0;
+  background: #111;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+/* Заборона desktop overflow */
+main,
+section,
+header,
+footer,
+nav,
+div {
+  max-width: 100%;
+}
+
+/* Медіа */
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+/* Всі інпути/кнопки нормально поводяться на Android */
+input,
+select,
+textarea,
+button {
+  font: inherit;
+  max-width: 100%;
+}
+
+/* Глобальні класи, які часто є у проекті */
+.container,
+.wrapper,
+.page,
+.layout,
+.content,
+.app,
+.home,
+.catalog,
+.checkout,
+.vendor,
+.dashboard {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Якщо десь випадково стоїть desktop width */
+[style*="width: 1200px"],
+[style*="width: 1220px"],
+[style*="width: 1180px"],
+[style*="width: 1000px"] {
+  width: 100% !important;
+}
+
+/* Основні сторінки */
+@media (max-width: 768px) {
+  body {
+    background: #111;
+  }
+
+  h1 {
+    font-size: clamp(28px, 8vw, 38px) !important;
+    line-height: 1.1 !important;
+    letter-spacing: -0.8px !important;
+  }
+
+  h2 {
+    font-size: clamp(24px, 7vw, 32px) !important;
+    line-height: 1.15 !important;
+  }
+
+  h3 {
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+  }
+
+  p {
+    font-size: 15px !important;
+  }
+
+  button,
+  a > button {
+    min-height: 44px;
+  }
+
+  /* Прибирає ситуацію, коли контент займає 60%, а справа чорна зона */
+  main[style],
+  section[style],
+  div[style] {
+    max-width: 100% !important;
+  }
+
+  /* Hero / page sections */
+  section {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  main {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Карти / панелі */
+  article,
+  aside {
+    max-width: 100%;
+  }
+
+  /* Всі grid у мобілці — в одну колонку, якщо немає спеціального класу */
+  .home-hero-grid,
+  .home-filters,
+  .checkout-layout,
+  .checkout-form-grid,
+  .vendor-form-grid,
+  .vendor-product-row,
+  .cart-grid,
+  .fh-hero-grid,
+  .fh-filter-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .vendor-stats,
+  .vendor-mini-grid,
+  .success-grid,
+  .materials-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Каталог */
+  #catalog {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Картки товарів */
+  [style*="repeat(auto-fill"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Кнопки в hero */
+  .mobile-full-buttons button,
+  .mobile-full-buttons a {
+    width: 100%;
+  }
+}
+
+/* Дуже вузькі телефони */
+@media (max-width: 420px) {
+  main,
+  section {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+
+  .vendor-stats,
+  .vendor-mini-grid,
+  .success-grid,
+  .materials-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  button,
+  a > button {
+    width: 100%;
+  }
+}
+
+/* 3D редактор */
+@media (max-width: 860px) {
+  .fh,
+  .fh * {
+    box-sizing: border-box;
+  }
+
+  .fh {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  .fh .top,
+  .fh-topbar {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+
+  .workspace,
+  .fh-workspace {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  .canvasArea,
+  .fh-canvas-area,
+  .panel,
+  .fh-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .canvasWrap,
+  .fh-canvas-shell {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Планшети */
+@media (min-width: 769px) and (max-width: 1180px) {
+  main,
+  section {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .home-hero-grid,
+  .fh-hero-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .checkout-layout,
+  .cart-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
