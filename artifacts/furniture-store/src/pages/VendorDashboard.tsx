@@ -17,6 +17,7 @@ type VendorProduct = {
   stock: number;
   description: string;
   imageUrl: string;
+  model3dUrl?: string;
   designerType: string;
   has3DModel: boolean;
   status: ProductStatus;
@@ -67,6 +68,7 @@ type ProductForm = {
   stock: string;
   description: string;
   imageUrl: string;
+  model3dUrl: string;
   designerType: string;
   has3DModel: boolean;
 };
@@ -121,6 +123,23 @@ function saveOrders(orders: SavedOrder[]) {
   localStorage.setItem(LS_ORDERS, JSON.stringify(orders));
 }
 
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Не вдалося прочитати файл"));
+      }
+    };
+
+    reader.onerror = () => reject(new Error("Помилка читання файлу"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function VendorDashboard() {
   const auth = useAuth();
 
@@ -139,6 +158,7 @@ export default function VendorDashboard() {
     stock: "",
     description: "",
     imageUrl: "",
+    model3dUrl: "",
     designerType: "",
     has3DModel: false,
   });
@@ -162,6 +182,28 @@ export default function VendorDashboard() {
 
   function update<K extends keyof ProductForm>(key: K, value: ProductForm[K]) {
     setForm(prev => ({ ...prev, [key]: value }));
+  }
+
+
+  async function uploadProductImage(file?: File | null) {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Оберіть файл зображення");
+      return;
+    }
+
+    if (file.size > 2.5 * 1024 * 1024) {
+      alert("Фото завелике. Для тесту оберіть фото до 2.5 МБ");
+      return;
+    }
+
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      update("imageUrl", dataUrl);
+    } catch {
+      alert("Не вдалося завантажити фото");
+    }
   }
 
   function resetForm() {
@@ -203,8 +245,9 @@ export default function VendorDashboard() {
         stock,
         description: form.description,
         imageUrl: form.imageUrl || defaultImage(form.category),
+        model3dUrl: form.model3dUrl,
         designerType: form.designerType,
-        has3DModel: Boolean(form.designerType) || form.has3DModel,
+        has3DModel: Boolean(form.designerType) || Boolean(form.model3dUrl) || form.has3DModel,
       } : p));
 
       alert("Товар оновлено");
@@ -224,8 +267,9 @@ export default function VendorDashboard() {
       stock,
       description: form.description || "Опис товару",
       imageUrl: form.imageUrl || defaultImage(form.category),
+      model3dUrl: form.model3dUrl,
       designerType: form.designerType,
-      has3DModel: Boolean(form.designerType) || form.has3DModel,
+      has3DModel: Boolean(form.designerType) || Boolean(form.model3dUrl) || form.has3DModel,
       status: "active",
       createdAt: new Date().toISOString(),
     };
@@ -247,6 +291,7 @@ export default function VendorDashboard() {
       stock: String(product.stock),
       description: product.description,
       imageUrl: product.imageUrl,
+      model3dUrl: product.model3dUrl || "",
       designerType: product.designerType,
       has3DModel: product.has3DModel,
     });
@@ -337,9 +382,51 @@ export default function VendorDashboard() {
                   <Field label="Опис">
                     <textarea value={form.description} onChange={e => update("description", e.target.value)} placeholder="Короткий опис товару" style={{ ...input, minHeight: 90, resize: "vertical" }} />
                   </Field>
+                  <Field label="Фото товару з телефону">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => uploadProductImage(e.target.files?.[0])}
+                      style={fileInput}
+                    />
+                  </Field>
+
+                  {form.imageUrl && (
+                    <div style={previewBox}>
+                      <img src={form.imageUrl} alt="Попередній перегляд" style={previewImg} />
+                      <div>
+                        <b style={{ color: "#0F172A", fontSize: 14 }}>Фото додано</b>
+                        <p style={{ color: "#64748B", fontSize: 12, lineHeight: 1.4, margin: "4px 0 0" }}>
+                          Можна залишити це фото або вставити інше посилання нижче.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   <Field label="Посилання на фото">
                     <input value={form.imageUrl} onChange={e => update("imageUrl", e.target.value)} placeholder="https://..." style={input} />
                   </Field>
+
+                  <Field label="Посилання на 3D модель .glb">
+                    <input
+                      value={form.model3dUrl}
+                      onChange={e => {
+                        update("model3dUrl", e.target.value);
+                        if (e.target.value.trim()) update("has3DModel", true);
+                      }}
+                      placeholder="https://.../model.glb"
+                      style={input}
+                    />
+                  </Field>
+
+                  <label style={checkboxRow}>
+                    <input
+                      type="checkbox"
+                      checked={form.has3DModel}
+                      onChange={e => update("has3DModel", e.target.checked)}
+                    />
+                    <span>Товар можна приміряти в 3D редакторі</span>
+                  </label>
 
                   <button type="submit" style={{ ...blueBtn, width: "100%", justifyContent: "center" }}>{editingId ? "Зберегти зміни" : "Додати товар"}</button>
                 </form>
@@ -370,9 +457,15 @@ export default function VendorDashboard() {
                           <Mini label="Ціна" value={money(product.price)} />
                           <Mini label="Залишок" value={String(product.stock)} />
                           <Mini label="3D тип" value={product.designerType || "—"} />
+                          <Mini label="GLB модель" value={product.model3dUrl ? "Є" : "—"} />
                         </div>
                       </div>
                       <div style={actions}>
+                        {product.has3DModel && product.designerType && (
+                          <Link href={`/designer?add=${product.designerType}`} style={{ textDecoration: "none" }}>
+                            <button style={{ ...actionBtn, width: "100%" }}>Приміряти в 3D</button>
+                          </Link>
+                        )}
                         <button onClick={() => editProduct(product)} style={actionBtn}>Редагувати</button>
                         {product.status !== "active" && <button onClick={() => changeStatus(product.id, "active")} style={greenBtn}>Активувати</button>}
                         {product.status !== "paused" && <button onClick={() => changeStatus(product.id, "paused")} style={orangeBtn}>Пауза</button>}
@@ -502,6 +595,46 @@ const sectionTitle: React.CSSProperties = { margin: 0, color: "#0F172A", fontSiz
 const sectionSubtitle: React.CSSProperties = { margin: "5px 0 0", color: "#64748B", fontSize: 13, lineHeight: 1.5 };
 const formGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "1.3fr 1fr .8fr .8fr .8fr 1fr", gap: 10 };
 const input: React.CSSProperties = { width: "100%", boxSizing: "border-box", border: "1.5px solid #E2E8F0", borderRadius: 14, padding: "12px 13px", fontSize: 14, color: "#0F172A", background: "#fff", outline: "none", fontFamily: "inherit" };
+const fileInput: React.CSSProperties = {
+  width: "100%",
+  boxSizing: "border-box",
+  border: "1.5px dashed #CBD5E1",
+  borderRadius: 14,
+  padding: "12px 13px",
+  fontSize: 14,
+  color: "#334155",
+  background: "#F8FAFC",
+  outline: "none",
+  fontFamily: "inherit",
+};
+
+const previewBox: React.CSSProperties = {
+  display: "flex",
+  gap: 12,
+  alignItems: "center",
+  border: "1px solid #E2E8F0",
+  background: "#F8FAFC",
+  borderRadius: 16,
+  padding: 10,
+};
+
+const previewImg: React.CSSProperties = {
+  width: 86,
+  height: 68,
+  borderRadius: 12,
+  objectFit: "cover",
+  background: "#E2E8F0",
+};
+
+const checkboxRow: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  color: "#334155",
+  fontSize: 14,
+  fontWeight: 850,
+};
+
 const whiteBtn: React.CSSProperties = { background: "#fff", color: "#0F172A", border: "none", borderRadius: 14, padding: "12px 18px", fontSize: 14, fontWeight: 950, cursor: "pointer" };
 const blueBtn: React.CSSProperties = { background: "#2563EB", color: "#fff", border: "none", borderRadius: 14, padding: "12px 18px", fontSize: 14, fontWeight: 950, cursor: "pointer", display: "inline-flex", alignItems: "center" };
 const greyBtn: React.CSSProperties = { background: "#F8FAFC", color: "#334155", border: "1px solid #E2E8F0", borderRadius: 12, padding: "10px 13px", fontSize: 13, fontWeight: 900, cursor: "pointer" };
@@ -511,7 +644,7 @@ const thumbWrap: React.CSSProperties = { width: 100, height: 86, borderRadius: 1
 const thumb: React.CSSProperties = { width: "100%", height: "100%", objectFit: "cover" };
 const productTitle: React.CSSProperties = { margin: 0, color: "#0F172A", fontSize: 17, fontWeight: 950 };
 const productDesc: React.CSSProperties = { color: "#64748B", fontSize: 13, lineHeight: 1.45, margin: "7px 0 10px" };
-const miniGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 };
+const miniGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8 };
 const mini: React.CSSProperties = { background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 12, padding: "8px 9px", minWidth: 0 };
 const actions: React.CSSProperties = { display: "grid", gap: 7 };
 const actionBtn: React.CSSProperties = { background: "#fff", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: 10, padding: "8px 10px", fontSize: 12, fontWeight: 950, cursor: "pointer" };
