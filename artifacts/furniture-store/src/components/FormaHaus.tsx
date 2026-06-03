@@ -3,7 +3,7 @@ import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import * as THREE from "three";
 import { Canvas, ThreeEvent, useThree } from "@react-three/fiber";
-import { ContactShadows, Environment, OrbitControls } from "@react-three/drei";
+import { ContactShadows, Environment, OrbitControls, useGLTF } from "@react-three/drei";
 import { useCart } from "../context/CartContext";
 
 type ДизайнerTab = "furniture" | "materials" | "summary" | "ai";
@@ -24,6 +24,13 @@ type PlacedItem = КаталогItem & {
   instanceId: string;
   position: [number, number, number];
   rotation: number;
+  model3dUrl?: string;
+};
+
+type RoomDimensions = {
+  length: number;
+  width: number;
+  height: number;
 };
 
 const LS_VENDOR_PRODUCTS = "formahaus_vendor_products";
@@ -118,13 +125,20 @@ export default function FormaHaus() {
   const cart = useCart();
 
   const [tab, setTab] = useState<ДизайнerTab>("furniture");
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(true);
   const [items, setItems] = useState<PlacedItem[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [floorId, setFloorId] = useState("oak");
   const [wallId, setWallId] = useState("white");
+  const [roomDimensions, setRoomDimensions] = useState<RoomDimensions>({ length: 6, width: 4, height: 2.8 });
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [priceFilter, setPriceFilter] = useState("all");
+
+  function openTab(nextTab: ДизайнerTab) {
+    setTab(nextTab);
+    setMobilePanelOpen(true);
+  }
 
   const vendorProducts = useMemo(() => readVendorProducts(), []);
   const catalog = useMemo(() => [...vendorProducts, ...FURNITURE], [vendorProducts]);
@@ -135,7 +149,11 @@ export default function FormaHaus() {
   const wall = WALL_OPTIONS.find(w => w.id === wallId) || WALL_OPTIONS[0];
 
   const furnitureРазом = items.reduce((sum, item) => sum + item.price, 0);
-  const projectРазом = furnitureРазом + floor.price + wall.price;
+  const roomArea = roomDimensions.length * roomDimensions.width;
+  const wallArea = 2 * (roomDimensions.length + roomDimensions.width) * roomDimensions.height;
+  const floorРазом = Math.round((floor.price / 24) * roomArea);
+  const wallРазом = Math.round((wall.price / 24) * wallArea);
+  const projectРазом = furnitureРазом + floorРазом + wallРазом;
 
   const categories = useMemo(() => ["All", ...Array.from(new Set(catalog.map(i => i.category)))], [catalog]);
 
@@ -211,6 +229,22 @@ export default function FormaHaus() {
     setItems(prev => prev.map(item => item.instanceId === id ? { ...item, position } : item));
   }, []);
 
+  function updateRoomDimension(key: keyof RoomDimensions, value: number) {
+    const limits: Record<keyof RoomDimensions, { min: number; max: number }> = {
+      length: { min: 2.4, max: 12 },
+      width: { min: 2.2, max: 10 },
+      height: { min: 2.2, max: 4.2 },
+    };
+
+    const safeValue = Number.isFinite(value) ? value : roomDimensions[key];
+    const clamped = THREE.MathUtils.clamp(safeValue, limits[key].min, limits[key].max);
+
+    setRoomDimensions(prev => ({
+      ...prev,
+      [key]: Math.round(clamped * 10) / 10,
+    }));
+  }
+
   function changeFloor(id: string) {
     setFloorId(id);
     if (cart.setFloorKind) cart.setFloorKind(id);
@@ -231,8 +265,8 @@ export default function FormaHaus() {
 
         <div className="fh-pro-project">
           <span>Мій проект</span>
-          <b>Вітальня 24м²</b>
-          <small>{items.length} об'єктів · {money(projectРазом)}</small>
+          <b>Кімната {roomDimensions.length}×{roomDimensions.width} м</b>
+          <small>{items.length} об'єктів · {roomArea.toFixed(1)} м² · {money(projectРазом)}</small>
         </div>
 
         <div className="fh-pro-top-actions">
@@ -249,12 +283,12 @@ export default function FormaHaus() {
 
       <main className="fh-pro-workspace">
         <nav className="fh-pro-rail">
-          <RailButton active={tab === "furniture"} icon="🛋" label="Каталог" onClick={() => setTab("furniture")} />
-          <RailButton active={tab === "materials"} icon="▱" label="Матеріали" onClick={() => setTab("materials")} />
-          <RailButton active={false} icon="💡" label="Освітлення" onClick={() => setTab("furniture")} />
+          <RailButton active={tab === "furniture"} icon="🛋" label="Каталог" onClick={() => openTab("furniture")} />
+          <RailButton active={tab === "materials"} icon="▱" label="Матеріали" onClick={() => openTab("materials")} />
+          <RailButton active={false} icon="💡" label="Освітлення" onClick={() => openTab("furniture")} />
           <RailButton active={false} icon="🌿" label="Декор" onClick={() => setCategoryFilter("Декор")} />
-          <RailButton active={tab === "summary"} icon="＄" label="Кошторис" onClick={() => setTab("summary")} />
-          <RailButton active={tab === "ai"} icon="✦" label="AI Дизайн" onClick={() => setTab("ai")} />
+          <RailButton active={tab === "summary"} icon="＄" label="Кошторис" onClick={() => openTab("summary")} />
+          <RailButton active={tab === "ai"} icon="✦" label="AI Дизайн" onClick={() => openTab("ai")} />
           <div className="rail-spacer" />
           <RailButton active={false} icon="?" label="Довідка" onClick={() => alert("Порада: оберіть товар, перетягніть його по кімнаті та додайте проект у кошик.")} />
         </nav>
@@ -270,6 +304,7 @@ export default function FormaHaus() {
                 onMove={updateItemPosition}
                 floor={floor}
                 wallColor={wall.color}
+                roomDimensions={roomDimensions}
               />
             </Canvas>
 
@@ -301,12 +336,13 @@ export default function FormaHaus() {
             <div className="nav-cube">⌂</div>
           </div>
 
-          <section className="fh-pro-bottom-panel">
+          <section className={`fh-pro-bottom-panel ${mobilePanelOpen ? "open" : ""}`}>
             <div className="bottom-tabs">
-              <button className={tab === "furniture" ? "active" : ""} onClick={() => setTab("furniture")}>Каталог</button>
-              <button className={tab === "materials" ? "active" : ""} onClick={() => setTab("materials")}>Матеріали</button>
-              <button className={tab === "summary" ? "active" : ""} onClick={() => setTab("summary")}>Кошторис</button>
-              <button className={tab === "ai" ? "active" : ""} onClick={() => setTab("ai")}>AI</button>
+              <button className="mobile-panel-close" onClick={() => setMobilePanelOpen(false)}>×</button>
+              <button className={tab === "furniture" ? "active" : ""} onClick={() => openTab("furniture")}>Каталог</button>
+              <button className={tab === "materials" ? "active" : ""} onClick={() => openTab("materials")}>Матеріали</button>
+              <button className={tab === "summary" ? "active" : ""} onClick={() => openTab("summary")}>Кошторис</button>
+              <button className={tab === "ai" ? "active" : ""} onClick={() => openTab("ai")}>AI</button>
             </div>
 
             {tab === "furniture" && (
@@ -340,6 +376,7 @@ export default function FormaHaus() {
 
             {tab === "materials" && (
               <div className="materials-layout">
+                <RoomSettings dimensions={roomDimensions} onChange={updateRoomDimension} />
                 <MaterialSection title="Підлога" options={FLOOR_OPTIONS} currentId={floorId} onSelect={changeFloor} />
                 <MaterialSection title="Стіни" options={WALL_OPTIONS} currentId={wallId} onSelect={changeWall} />
               </div>
@@ -349,8 +386,8 @@ export default function FormaHaus() {
               <div className="summary-large">
                 <h3>Кошторис проекту</h3>
                 <SummaryRow label="Меблі" value={money(furnitureРазом)} />
-                <SummaryRow label={`Підлога · ${floor.name}`} value={money(floor.price)} />
-                <SummaryRow label={`Стіни · ${wall.name}`} value={money(wall.price)} />
+                <SummaryRow label={`Підлога · ${floor.name} · ${roomArea.toFixed(1)} м²`} value={money(floorРазом)} />
+                <SummaryRow label={`Стіни · ${wall.name} · ${wallArea.toFixed(1)} м²`} value={money(wallРазом)} />
                 <div className="summary-total"><span>Разом</span><b>{money(projectРазом)}</b></div>
                 <Link href="/cart" className="summary-checkout">Перейти до кошика ({cart.itemCount})</Link>
               </div>
@@ -386,6 +423,10 @@ export default function FormaHaus() {
             </div>
           </div>
 
+          <InspectorBlock title="Параметри кімнати">
+            <RoomDimensionInputs dimensions={roomDimensions} onChange={updateRoomDimension} />
+          </InspectorBlock>
+
           <InspectorBlock title="Позиція">
             <div className="triple-grid"><FieldBox label="X" value="2.45 м" /><FieldBox label="Y" value="0.00 м" /><FieldBox label="Z" value="1.32 м" /></div>
           </InspectorBlock>
@@ -407,8 +448,8 @@ export default function FormaHaus() {
           <div className="inspector-card cost-card">
             <div className="cost-head"><b>Кошторис проекту</b><strong>{money(projectРазом)}</strong></div>
             <SummaryRow label="Меблі" value={money(furnitureРазом)} />
-            <SummaryRow label="Підлога" value={money(floor.price)} />
-            <SummaryRow label="Стіни та обої" value={money(wall.price)} />
+            <SummaryRow label={`Підлога · ${roomArea.toFixed(1)} м²`} value={money(floorРазом)} />
+            <SummaryRow label={`Стіни та обої · ${wallArea.toFixed(1)} м²`} value={money(wallРазом)} />
             <SummaryRow label="Освітлення" value="$0" />
             <Link href="/cart" className="checkout-pro">Перейти до кошика ({cart.itemCount})</Link>
           </div>
@@ -416,11 +457,11 @@ export default function FormaHaus() {
       </main>
 
       <nav className="mobile-pro-nav">
-        <button className={tab === "furniture" ? "active" : ""} onClick={() => setTab("furniture")}>🛋<span>Каталог</span></button>
-        <button className={tab === "materials" ? "active" : ""} onClick={() => setTab("materials")}>▱<span>Матеріали</span></button>
-        <button className="plus" onClick={() => setTab("furniture")}>+</button>
-        <button className={tab === "summary" ? "active" : ""} onClick={() => setTab("summary")}>＄<span>Кошторис</span></button>
-        <button className={tab === "ai" ? "active" : ""} onClick={() => setTab("ai")}>✦<span>AI</span></button>
+        <button className={tab === "furniture" ? "active" : ""} onClick={() => openTab("furniture")}>🛋<span>Каталог</span></button>
+        <button className={tab === "materials" ? "active" : ""} onClick={() => openTab("materials")}>▱<span>Матеріали</span></button>
+        <button className="plus" onClick={() => openTab("furniture")}>+</button>
+        <button className={tab === "summary" ? "active" : ""} onClick={() => openTab("summary")}>＄<span>Кошторис</span></button>
+        <button className={tab === "ai" ? "active" : ""} onClick={() => openTab("ai")}>✦<span>AI</span></button>
       </nav>
 
       <style>{styles}</style>
@@ -459,6 +500,34 @@ function MaterialSection({ title, options, currentId, onSelect }: { title: strin
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function RoomSettings({ dimensions, onChange }: { dimensions: RoomDimensions; onChange: (key: keyof RoomDimensions, value: number) => void }) {
+  return (
+    <div className="room-settings-panel">
+      <div className="section-line"><b>Параметри кімнати</b><span>{(dimensions.length * dimensions.width).toFixed(1)} м²</span></div>
+      <RoomDimensionInputs dimensions={dimensions} onChange={onChange} />
+    </div>
+  );
+}
+
+function RoomDimensionInputs({ dimensions, onChange }: { dimensions: RoomDimensions; onChange: (key: keyof RoomDimensions, value: number) => void }) {
+  return (
+    <div className="room-dimension-grid">
+      <label>
+        <span>Довжина</span>
+        <input type="number" min="2.4" max="12" step="0.1" value={dimensions.length} onChange={e => onChange("length", Number(e.target.value))} />
+      </label>
+      <label>
+        <span>Ширина</span>
+        <input type="number" min="2.2" max="10" step="0.1" value={dimensions.width} onChange={e => onChange("width", Number(e.target.value))} />
+      </label>
+      <label>
+        <span>Висота</span>
+        <input type="number" min="2.2" max="4.2" step="0.1" value={dimensions.height} onChange={e => onChange("height", Number(e.target.value))} />
+      </label>
     </div>
   );
 }
@@ -519,6 +588,7 @@ const styles = `
   .fh-pro-bottom-panel { min-height:0; margin:0 14px 14px; overflow:auto; background:linear-gradient(180deg,rgba(12,20,30,.96),rgba(7,12,20,.98)); border:1px solid rgba(148,163,184,.16); border-top:0; border-radius:0 0 18px 18px; padding:0 16px 16px; }
   .bottom-tabs { position:sticky; top:0; display:flex; gap:34px; padding:17px 0 13px; background:rgba(8,13,20,.96); z-index:4; border-bottom:1px solid rgba(148,163,184,.14); }
   .bottom-tabs button { border:0; background:transparent; color:#B6C2D1; font-size:16px; font-weight:850; padding:0 2px 11px; cursor:pointer; }
+  .mobile-panel-close { display:none; }
   .bottom-tabs button.active { color:#fff; border-bottom:2px solid #8B5CF6; }
   .catalog-filter-bar { display:grid; grid-template-columns:1fr 160px; gap:12px; margin:16px 0 10px; }
   .search-wrap { height:45px; border:1px solid rgba(148,163,184,.2); background:#0B141F; border-radius:14px; display:flex; align-items:center; gap:10px; padding:0 13px; color:#94A3B8; }
@@ -542,6 +612,11 @@ const styles = `
   .product-placeholder { width:100%; height:100%; display:grid; place-items:center; color:#111; font-weight:950; }
 
   .materials-layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; padding-top:14px; }
+  .room-settings-panel { grid-column:1 / -1; background:#111A26; border:1px solid rgba(148,163,184,.16); border-radius:16px; padding:12px; }
+  .room-dimension-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .room-dimension-grid label { display:flex; flex-direction:column; gap:7px; color:#CBD5E1; font-size:12px; font-weight:900; }
+  .room-dimension-grid input { width:100%; box-sizing:border-box; border:1px solid rgba(148,163,184,.2); background:#0B141F; color:#fff; border-radius:12px; padding:11px 10px; outline:0; font-size:15px; font-weight:950; }
+
   .material-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
   .material-chip { border:1px solid rgba(148,163,184,.18); background:#111A26; color:#E5E7EB; border-radius:12px; padding:8px; cursor:pointer; }
   .material-chip span { display:block; height:54px; border-radius:10px; border:1px solid rgba(255,255,255,.18); margin-bottom:7px; }
@@ -597,20 +672,23 @@ const styles = `
     .fh-pro-logo { width:42px; height:42px; }
     .fh-pro-top-actions .icon-btn,.fh-pro-top-actions .mode-btn,.fh-pro-top-actions .save-btn { display:none; }
     .cart-btn { height:44px; min-width:92px; }
-    .fh-pro-workspace { height:calc(100vh - 64px - 80px); grid-template-columns:1fr; grid-template-rows:minmax(330px,45vh) minmax(0,1fr); }
+    .fh-pro-workspace { height:calc(100vh - 64px - 80px); grid-template-columns:1fr; grid-template-rows:1fr; overflow:hidden; }
     .fh-pro-rail { display:none; }
-    .fh-pro-stage { grid-template-rows:minmax(320px,45vh) minmax(0,1fr); }
-    .canvas-card { margin:10px; border-radius:22px; }
+    .fh-pro-stage { display:block; position:relative; min-height:0; overflow:hidden; }
+    .canvas-card { height:calc(100vh - 64px - 92px); margin:10px; border-radius:22px; }
     .scene-top-tools,.walk-btn,.nav-cube { display:none; }
     .object-float-tools { top:54%; }
     .view-tools { bottom:14px; }
-    .fh-pro-bottom-panel { margin:0 10px 10px; border-radius:22px; border-top:1px solid rgba(148,163,184,.16); padding:0 12px 12px; }
-    .bottom-tabs { gap:22px; overflow:auto; }
+    .fh-pro-bottom-panel { position:fixed; left:10px; right:10px; bottom:88px; max-height:52vh; min-height:290px; overflow:auto; margin:0; border-radius:24px; border:1px solid rgba(148,163,184,.22); padding:0 12px 14px; z-index:45; box-shadow:0 -18px 70px rgba(0,0,0,.62); transform:translateY(calc(100% + 110px)); opacity:0; pointer-events:none; transition:transform .22s ease, opacity .22s ease; }
+    .fh-pro-bottom-panel.open { transform:translateY(0); opacity:1; pointer-events:auto; }
+    .bottom-tabs { gap:22px; overflow:auto; padding-right:42px; }
+    .mobile-panel-close { display:grid !important; place-items:center; position:absolute; right:8px; top:11px; width:34px; height:34px; border-radius:12px; background:#172334 !important; color:#fff !important; font-size:22px !important; padding:0 !important; }
     .catalog-filter-bar { grid-template-columns:1fr; }
     .chips-row { padding-bottom:10px; }
     .product-strip { display:flex; overflow-x:auto; gap:12px; padding-bottom:12px; }
     .pro-product-card { min-width:160px; }
     .materials-layout { grid-template-columns:1fr; }
+    .room-dimension-grid { grid-template-columns:1fr; }
     .material-strip { display:flex; overflow-x:auto; }
     .material-chip { min-width:105px; }
     .mobile-pro-nav { position:fixed; left:0; right:0; bottom:0; height:80px; background:#081019; border-top:1px solid rgba(148,163,184,.16); display:grid; grid-template-columns:1fr 1fr 82px 1fr 1fr; align-items:center; padding:6px 10px max(6px, env(safe-area-inset-bottom)); z-index:50; }
@@ -624,8 +702,8 @@ const styles = `
     .fh-pro-brand-name { font-size:16px; letter-spacing:3px; }
     .cart-btn { min-width:82px; font-size:13px; }
     .canvas-card { min-height:310px; }
-    .fh-pro-stage { grid-template-rows: 39vh minmax(0,1fr); }
-    .fh-pro-workspace { grid-template-rows: 39vh minmax(0,1fr); }
+    .canvas-card { height:calc(100vh - 64px - 92px); }
+    .fh-pro-bottom-panel { max-height:56vh; min-height:300px; }
     .product-img-wrap { height:112px; }
     .pro-product-card { min-width:150px; }
   }
@@ -638,6 +716,7 @@ function Scene({
   onMove,
   floor,
   wallColor,
+  roomDimensions,
 }: {
   items: PlacedItem[];
   selectedId: string;
@@ -645,17 +724,43 @@ function Scene({
   onMove: (id: string, position: [number, number, number]) => void;
   floor: typeof FLOOR_OPTIONS[number];
   wallColor: string;
+  roomDimensions: RoomDimensions;
 }) {
   return (
     <>
-      <color attach="background" args={["#e9eef5"]} />
-      <ambientLight intensity={0.45} />
-      <directionalLight position={[5, 7, 4]} intensity={2.4} castShadow shadow-mapSize={[2048, 2048]} />
-      <directionalLight position={[-4, 3, -5]} intensity={0.6} />
+      <color attach="background" args={["#e9e3d9"]} />
+      <fog attach="fog" args={["#e9e3d9", 7, 18]} />
 
+      {/* PRO LIGHTING: тепле світло, тіні, акценти як у професійному planner */}
+      <ambientLight intensity={0.38} color="#fff3e4" />
+      <hemisphereLight intensity={0.45} color="#fff6e8" groundColor="#9b8064" />
+
+      <directionalLight
+        position={[4.5, 7.5, 4.2]}
+        intensity={2.2}
+        color="#fff0dc"
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-8}
+        shadow-camera-right={8}
+        shadow-camera-top={8}
+        shadow-camera-bottom={-8}
+        shadow-bias={-0.00015}
+      />
+
+      <spotLight
+        position={[-2.8, 4.2, 2.8]}
+        angle={0.42}
+        penumbra={0.75}
+        intensity={1.25}
+        color="#ffe2bf"
+        castShadow
+      />
+
+      <pointLight position={[1.9, 2.2, -2.3]} intensity={0.75} color="#fff5e9" />
       <Environment preset="apartment" />
 
-      <Room floor={floor} wallColor={wallColor} />
+      <Room floor={floor} wallColor={wallColor} dimensions={roomDimensions} />
 
       {items.map(item => (
         <DraggableКаталог
@@ -664,6 +769,7 @@ function Scene({
           selected={item.instanceId === selectedId}
           onSelect={onSelect}
           onMove={onMove}
+          roomDimensions={roomDimensions}
         />
       ))}
 
@@ -802,47 +908,63 @@ function drawFloorConcrete(ctx: CanvasRenderingContext2D, size: number) {
   }
 }
 
-function Room({ floor, wallColor }: { floor: typeof FLOOR_OPTIONS[number]; wallColor: string }) {
+function Room({ floor, wallColor, dimensions }: { floor: typeof FLOOR_OPTIONS[number]; wallColor: string; dimensions: RoomDimensions }) {
   const floorTexture = useMemo(() => createFloorTexture(floor), [floor]);
+  const length = dimensions.length;
+  const width = dimensions.width;
+  const height = dimensions.height;
+  const halfLength = length / 2;
+  const halfWidth = width / 2;
+
   return (
     <group>
       <mesh rotation-x={-Math.PI / 2} receiveShadow>
-        <planeGeometry args={[7, 7]} />
+        <planeGeometry args={[length, width]} />
         <meshStandardMaterial map={floorTexture} roughness={0.58} metalness={0.03} />
       </mesh>
 
-      <mesh position={[0, 1.75, -3.5]} receiveShadow>
-        <planeGeometry args={[7, 3.5]} />
+      <mesh position={[0, height / 2, -halfWidth]} receiveShadow>
+        <planeGeometry args={[length, height]} />
         <meshStandardMaterial color={wallColor} roughness={0.9} />
       </mesh>
 
-      <mesh position={[-3.5, 1.75, 0]} rotation-y={Math.PI / 2} receiveShadow>
-        <planeGeometry args={[7, 3.5]} />
+      <mesh position={[-halfLength, height / 2, 0]} rotation-y={Math.PI / 2} receiveShadow>
+        <planeGeometry args={[width, height]} />
         <meshStandardMaterial color={wallColor} roughness={0.9} />
       </mesh>
 
-      <mesh position={[3.5, 1.75, 0]} rotation-y={-Math.PI / 2} receiveShadow>
-        <planeGeometry args={[7, 3.5]} />
+      <mesh position={[halfLength, height / 2, 0]} rotation-y={-Math.PI / 2} receiveShadow>
+        <planeGeometry args={[width, height]} />
         <meshStandardMaterial color={wallColor} roughness={0.9} />
       </mesh>
 
-      <mesh position={[0, 0.04, -3.47]}>
-        <boxGeometry args={[7, 0.08, 0.06]} />
+      <mesh position={[0, height, 0]} rotation-x={Math.PI / 2} receiveShadow>
+        <planeGeometry args={[length, width]} />
+        <meshStandardMaterial color="#f7f4ed" roughness={0.86} transparent opacity={0.82} side={THREE.DoubleSide} />
+      </mesh>
+
+      <mesh position={[0, 0.04, -halfWidth + 0.03]}>
+        <boxGeometry args={[length, 0.08, 0.06]} />
         <meshStandardMaterial color="#ffffff" roughness={0.65} />
       </mesh>
 
-      <mesh position={[-3.47, 0.04, 0]} rotation-y={Math.PI / 2}>
-        <boxGeometry args={[7, 0.08, 0.06]} />
+      <mesh position={[-halfLength + 0.03, 0.04, 0]} rotation-y={Math.PI / 2}>
+        <boxGeometry args={[width, 0.08, 0.06]} />
         <meshStandardMaterial color="#ffffff" roughness={0.65} />
       </mesh>
 
-      <mesh position={[0.8, 2.12, -3.48]}>
-        <boxGeometry args={[1.35, 1.05, 0.05]} />
+      <mesh position={[halfLength - 0.03, 0.04, 0]} rotation-y={Math.PI / 2}>
+        <boxGeometry args={[width, 0.08, 0.06]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.65} />
+      </mesh>
+
+      <mesh position={[Math.min(0.8, halfLength - 0.9), height * 0.62, -halfWidth - 0.018]}>
+        <boxGeometry args={[Math.min(1.45, length * 0.28), Math.min(1.05, height * 0.38), 0.05]} />
         <meshStandardMaterial color="#ffffff" roughness={0.3} />
       </mesh>
 
-      <mesh position={[0.8, 2.12, -3.455]}>
-        <planeGeometry args={[1.18, 0.88]} />
+      <mesh position={[Math.min(0.8, halfLength - 0.9), height * 0.62, -halfWidth - 0.042]}>
+        <planeGeometry args={[Math.min(1.25, length * 0.24), Math.min(0.86, height * 0.31)]} />
         <meshStandardMaterial color="#bcd9ee" roughness={0.16} metalness={0.05} transparent opacity={0.52} />
       </mesh>
     </group>
@@ -854,11 +976,13 @@ function DraggableКаталог({
   selected,
   onSelect,
   onMove,
+  roomDimensions,
 }: {
   item: PlacedItem;
   selected: boolean;
   onSelect: (id: string) => void;
   onMove: (id: string, position: [number, number, number]) => void;
+  roomDimensions: RoomDimensions;
 }) {
   const groupRef = useRef<THREE.Group | null>(null);
   const dragging = useRef(false);
@@ -875,10 +999,13 @@ function DraggableКаталог({
     const hit = raycaster.ray.intersectPlane(plane, point);
     if (!hit) return null;
 
+    const xLimit = Math.max(0.8, roomDimensions.length / 2 - 0.45);
+    const zLimit = Math.max(0.8, roomDimensions.width / 2 - 0.45);
+
     return [
-      THREE.MathUtils.clamp(point.x, -2.8, 2.8),
+      THREE.MathUtils.clamp(point.x, -xLimit, xLimit),
       0,
-      THREE.MathUtils.clamp(point.z, -2.8, 2.8),
+      THREE.MathUtils.clamp(point.z, -zLimit, zLimit),
     ] as [number, number, number];
   }
 
@@ -913,12 +1040,29 @@ function DraggableКаталог({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
-      <КаталогModel type={item.type} selected={selected} />
+      {item.model3dUrl ? <GLBModel url={item.model3dUrl} selected={selected} /> : <КаталогModel type={item.type} selected={selected} />}
 
       {selected && (
         <mesh rotation-x={-Math.PI / 2} position-y={0.012}>
           <ringGeometry args={[0.62, 0.72, 64]} />
-          <meshBasicMaterial color="#2563eb" transparent opacity={0.9} depthWrite={false} />
+          <meshBasicMaterial color="#b78b66" transparent opacity={0.9} depthWrite={false} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+
+function GLBModel({ url, selected }: { url: string; selected: boolean }) {
+  const gltf = useGLTF(url);
+
+  return (
+    <group scale={1}>
+      <primitive object={gltf.scene.clone()} />
+      {selected && (
+        <mesh rotation-x={-Math.PI / 2} position-y={0.02}>
+          <ringGeometry args={[0.72, 0.84, 64]} />
+          <meshBasicMaterial color="#b78b66" transparent opacity={0.95} depthWrite={false} />
         </mesh>
       )}
     </group>
@@ -926,9 +1070,9 @@ function DraggableКаталог({
 }
 
 function КаталогModel({ type, selected }: { type: string; selected: boolean }) {
-  const fabric = new THREE.MeshStandardMaterial({ color: selected ? "#50617a" : "#8c8f94", roughness: 0.82 });
-  const wood = new THREE.MeshStandardMaterial({ color: "#b88955", roughness: 0.55 });
-  const dark = new THREE.MeshStandardMaterial({ color: "#111827", roughness: 0.45 });
+  const fabric = new THREE.MeshStandardMaterial({ color: selected ? "#6b5f53" : "#9a8f83", roughness: 0.88, metalness: 0.02 });
+  const wood = new THREE.MeshStandardMaterial({ color: "#a77b52", roughness: 0.62, metalness: 0.03 });
+  const dark = new THREE.MeshStandardMaterial({ color: "#2f2a25", roughness: 0.52, metalness: 0.08 });
   const metal = new THREE.MeshStandardMaterial({ color: "#2f343d", metalness: 0.55, roughness: 0.28 });
 
   if (type === "sofa") {
