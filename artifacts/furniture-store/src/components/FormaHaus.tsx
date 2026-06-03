@@ -20,6 +20,24 @@ type КаталогItem = {
   sellerName?: string;
 };
 
+type VendorProduct = {
+  id: string;
+  vendorId: string;
+  vendorName: string;
+  name: string;
+  category: string;
+  price: number;
+  oldPrice?: number;
+  stock: number;
+  description: string;
+  imageUrl: string;
+  model3dUrl?: string;
+  designerType: string;
+  has3DModel: boolean;
+  status: "draft" | "active" | "paused";
+  createdAt: string;
+};
+
 type PlacedItem = КаталогItem & {
   instanceId: string;
   position: [number, number, number];
@@ -86,6 +104,28 @@ function money(value: number) {
   return `$${Number(value || 0).toLocaleString("en-US")}`;
 }
 
+function loadVendorProducts(): VendorProduct[] {
+  try {
+    const raw = localStorage.getItem(LS_VENDOR_PRODUCTS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeVendorProduct(product: VendorProduct): КаталогItem {
+  return {
+    id: `vendor_${product.id}`,
+    type: product.designerType || product.category || "product",
+    name: product.name,
+    category: product.category || "Товари продавців",
+    price: Number(product.price || 0),
+    description: product.description || `Товар продавця ${product.vendorName || ""}`,
+    imageUrl: product.imageUrl,
+    model3dUrl: product.model3dUrl,
+  };
+}
+
 function readVendorProducts(): КаталогItem[] {
   if (typeof window === "undefined") return [];
 
@@ -134,6 +174,11 @@ export default function FormaHaus() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [priceFilter, setPriceFilter] = useState("all");
+  const [vendorProducts3D, setVendorProducts3D] = useState<КаталогItem[]>(() =>
+    loadVendorProducts()
+      .filter(product => product.status === "active" && (product.has3DModel || product.designerType || product.model3dUrl))
+      .map(normalizeVendorProduct)
+  );
 
   function openTab(nextTab: ДизайнerTab) {
     setTab(nextTab);
@@ -142,6 +187,30 @@ export default function FormaHaus() {
 
   const vendorProducts = useMemo(() => readVendorProducts(), []);
   const catalog = useMemo(() => [...vendorProducts, ...FURNITURE], [vendorProducts]);
+
+  function refreshVendorProducts3D() {
+    const products = loadVendorProducts()
+      .filter(product => product.status === "active" && (product.has3DModel || product.designerType || product.model3dUrl))
+      .map(normalizeVendorProduct);
+
+    setVendorProducts3D(products);
+  }
+
+  useEffect(() => {
+    refreshVendorProducts3D();
+
+    function onStorage() {
+      refreshVendorProducts3D();
+    }
+
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", refreshVendorProducts3D);
+
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", refreshVendorProducts3D);
+    };
+  }, []);
 
   const selected = items.find(i => i.instanceId === selectedId);
   const selectedCatalogItem = selected || catalog[0];
@@ -1040,7 +1109,7 @@ function DraggableКаталог({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
-      {item.model3dUrl ? <GLBModel url={item.model3dUrl} selected={selected} /> : <КаталогModel type={item.type} selected={selected} />}
+      {item.model3dUrl ? <GLBModel url={item.model3dUrl} selected={selected} /> : {item.model3dUrl ? <Suspense fallback={<КаталогModel type={item.type} selected={selected} />}><GLBModel url={item.model3dUrl} selected={selected} /></Suspense> : <КаталогModel type={item.type} selected={selected} />}}
 
       {selected && (
         <mesh rotation-x={-Math.PI / 2} position-y={0.012}>
