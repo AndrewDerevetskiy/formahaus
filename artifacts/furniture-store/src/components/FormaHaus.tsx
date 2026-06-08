@@ -1,5 +1,5 @@
 import Pro3DEffects from "./Pro3DEffects";
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import * as THREE from "three";
 import { Canvas, ThreeEvent, useThree } from "@react-three/fiber";
@@ -1109,7 +1109,7 @@ function DraggableКаталог({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
-      {item.model3dUrl ? <GLBModel url={item.model3dUrl} selected={selected} /> : {item.model3dUrl ? <Suspense fallback={<КаталогModel type={item.type} selected={selected} />}><GLBModel url={item.model3dUrl} selected={selected} /></Suspense> : <КаталогModel type={item.type} selected={selected} />}}
+      {item.model3dUrl ? <Suspense fallback={<КаталогModel type={item.type} selected={selected} />}><GLBModel url={item.model3dUrl} selected={selected} /></Suspense> : <КаталогModel type={item.type} selected={selected} />}
 
       {selected && (
         <mesh rotation-x={-Math.PI / 2} position-y={0.012}>
