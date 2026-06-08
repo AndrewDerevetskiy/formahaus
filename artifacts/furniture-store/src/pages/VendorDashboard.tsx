@@ -69,6 +69,8 @@ type ProductForm = {
   description: string;
   imageUrl: string;
   model3dUrl: string;
+  aiPhotoUrls: string[];
+  ai3dStatus: "idle" | "ready" | "generating" | "done" | "error";
   designerType: string;
   has3DModel: boolean;
 };
@@ -159,6 +161,8 @@ export default function VendorDashboard() {
     description: "",
     imageUrl: "",
     model3dUrl: "",
+    aiPhotoUrls: [],
+    ai3dStatus: "idle",
     designerType: "",
     has3DModel: false,
   });
@@ -204,6 +208,73 @@ export default function VendorDashboard() {
     } catch {
       alert("Не вдалося завантажити фото");
     }
+  }
+
+  async function uploadAiModelPhotos(files?: FileList | null) {
+    if (!files || files.length === 0) return;
+
+    const selectedFiles = Array.from(files).slice(0, 6);
+
+    const invalid = selectedFiles.find(file => !file.type.startsWith("image/"));
+    if (invalid) {
+      alert("Для AI 3D моделі можна завантажувати тільки фото");
+      return;
+    }
+
+    const tooLarge = selectedFiles.find(file => file.size > 2.5 * 1024 * 1024);
+    if (tooLarge) {
+      alert("Одне з фото завелике. Для тесту оберіть фото до 2.5 МБ");
+      return;
+    }
+
+    try {
+      const urls = await Promise.all(selectedFiles.map(fileToDataUrl));
+
+      setForm(prev => ({
+        ...prev,
+        aiPhotoUrls: urls,
+        ai3dStatus: urls.length >= 3 ? "ready" : "idle",
+      }));
+    } catch {
+      alert("Не вдалося прочитати фото");
+    }
+  }
+
+  function removeAiPhoto(index: number) {
+    setForm(prev => {
+      const next = prev.aiPhotoUrls.filter((_, i) => i !== index);
+
+      return {
+        ...prev,
+        aiPhotoUrls: next,
+        ai3dStatus: next.length >= 3 ? "ready" : "idle",
+      };
+    });
+  }
+
+  async function generateAi3DModel() {
+    if (form.aiPhotoUrls.length < 3) {
+      alert("Завантажте мінімум 3 фото товару для створення 3D моделі");
+      return;
+    }
+
+    setForm(prev => ({ ...prev, ai3dStatus: "generating" }));
+
+    // Тимчасова mock-генерація.
+    // Пізніше цей блок замінимо на реальний API:
+    // POST /api/generate-3d-model -> повертає URL на model.glb
+    await new Promise(resolve => setTimeout(resolve, 1800));
+
+    const demoGlb = "https://modelviewer.dev/shared-assets/models/Astronaut.glb";
+
+    setForm(prev => ({
+      ...prev,
+      model3dUrl: demoGlb,
+      has3DModel: true,
+      ai3dStatus: "done",
+    }));
+
+    alert("AI 3D модель створена в тестовому режимі. Пізніше підключимо реальний AI-сервіс.");
   }
 
   function resetForm() {
@@ -292,6 +363,8 @@ export default function VendorDashboard() {
       description: product.description,
       imageUrl: product.imageUrl,
       model3dUrl: product.model3dUrl || "",
+      aiPhotoUrls: [],
+      ai3dStatus: product.model3dUrl ? "done" : "idle",
       designerType: product.designerType,
       has3DModel: product.has3DModel,
     });
@@ -418,6 +491,78 @@ export default function VendorDashboard() {
                       style={input}
                     />
                   </Field>
+
+                  <div style={aiModelBox}>
+                    <div style={aiModelHead}>
+                      <div>
+                        <b style={{ color: "#0F172A", fontSize: 15 }}>AI 3D модель з фото</b>
+                        <p style={{ color: "#64748B", fontSize: 12, lineHeight: 1.45, margin: "5px 0 0" }}>
+                          Завантажте 3–6 фото товару з різних ракурсів. Поки працює тестовий режим, далі підключимо справжній AI.
+                        </p>
+                      </div>
+                      <span style={aiStatusBadge(form.ai3dStatus)}>
+                        {aiStatusText(form.ai3dStatus)}
+                      </span>
+                    </div>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={e => uploadAiModelPhotos(e.target.files)}
+                      style={fileInput}
+                    />
+
+                    {form.aiPhotoUrls.length > 0 && (
+                      <div style={aiPhotoGrid}>
+                        {form.aiPhotoUrls.map((url, index) => (
+                          <div key={index} style={aiPhotoCard}>
+                            <img src={url} alt={`AI фото ${index + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                            <button
+                              type="button"
+                              onClick={() => removeAiPhoto(index)}
+                              style={{
+                                position: "absolute",
+                                top: 5,
+                                right: 5,
+                                width: 22,
+                                height: 22,
+                                borderRadius: 999,
+                                border: "none",
+                                background: "rgba(15,23,42,.78)",
+                                color: "#fff",
+                                fontSize: 15,
+                                fontWeight: 950,
+                                cursor: "pointer",
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={generateAi3DModel}
+                      disabled={form.aiPhotoUrls.length < 3 || form.ai3dStatus === "generating"}
+                      style={{
+                        ...aiGenerateBtn,
+                        opacity: form.aiPhotoUrls.length >= 3 && form.ai3dStatus !== "generating" ? 1 : 0.55,
+                        cursor: form.aiPhotoUrls.length >= 3 && form.ai3dStatus !== "generating" ? "pointer" : "not-allowed",
+                      }}
+                    >
+                      {form.ai3dStatus === "generating" ? "Створення 3D моделі..." : "AI створити 3D модель"}
+                    </button>
+
+                    {form.model3dUrl && (
+                      <div style={aiResultBox}>
+                        <b>GLB модель додана</b>
+                        <span>{form.model3dUrl}</span>
+                      </div>
+                    )}
+                  </div>
 
                   <label style={checkboxRow}>
                     <input
@@ -583,6 +728,31 @@ function Status({ status }: { status: OrderStatus }) {
   return <span style={{ background: data.bg, color: data.color, borderRadius: 999, padding: "6px 10px", fontSize: 12, fontWeight: 950 }}>{data.text}</span>;
 }
 
+function aiStatusText(status: ProductForm["ai3dStatus"]) {
+  if (status === "ready") return "Готово до AI";
+  if (status === "generating") return "Обробка";
+  if (status === "done") return "3D готова";
+  if (status === "error") return "Помилка";
+  return "Очікує фото";
+}
+
+function aiStatusBadge(status: ProductForm["ai3dStatus"]): React.CSSProperties {
+  const base: React.CSSProperties = {
+    borderRadius: 999,
+    padding: "6px 10px",
+    fontSize: 11,
+    fontWeight: 950,
+    whiteSpace: "nowrap",
+  };
+
+  if (status === "done") return { ...base, background: "#DCFCE7", color: "#166534" };
+  if (status === "generating") return { ...base, background: "#FEF3C7", color: "#92400E" };
+  if (status === "ready") return { ...base, background: "#DBEAFE", color: "#1D4ED8" };
+  if (status === "error") return { ...base, background: "#FEE2E2", color: "#991B1B" };
+
+  return { ...base, background: "#F1F5F9", color: "#475569" };
+}
+
 const hero: React.CSSProperties = { background: "linear-gradient(135deg,#0F172A,#1D4ED8)", color: "#fff", borderRadius: 28, padding: 24, display: "grid", gridTemplateColumns: "1fr auto", gap: 18, alignItems: "center", marginBottom: 18, boxShadow: "0 24px 70px rgba(15,23,42,.22)" };
 const badge: React.CSSProperties = { display: "inline-flex", background: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.2)", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 950, marginBottom: 14 };
 const heroTitle: React.CSSProperties = { margin: 0, fontSize: "clamp(30px,5vw,52px)", lineHeight: 1.05, fontWeight: 950 };
@@ -624,6 +794,58 @@ const previewImg: React.CSSProperties = {
   borderRadius: 12,
   objectFit: "cover",
   background: "#E2E8F0",
+};
+
+const aiModelBox: React.CSSProperties = {
+  border: "1.5px solid #E2E8F0",
+  background: "linear-gradient(135deg,#F8FAFC,#FFFFFF)",
+  borderRadius: 18,
+  padding: 14,
+  display: "grid",
+  gap: 12,
+};
+
+const aiModelHead: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: 12,
+};
+
+const aiPhotoGrid: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill,minmax(86px,1fr))",
+  gap: 8,
+};
+
+const aiPhotoCard: React.CSSProperties = {
+  position: "relative",
+  height: 76,
+  borderRadius: 14,
+  overflow: "hidden",
+  background: "#E2E8F0",
+  border: "1px solid #E2E8F0",
+};
+
+const aiGenerateBtn: React.CSSProperties = {
+  background: "#111827",
+  color: "#fff",
+  border: "none",
+  borderRadius: 14,
+  padding: "13px 16px",
+  fontSize: 14,
+  fontWeight: 950,
+};
+
+const aiResultBox: React.CSSProperties = {
+  background: "#DCFCE7",
+  color: "#166534",
+  borderRadius: 14,
+  padding: 12,
+  display: "grid",
+  gap: 4,
+  fontSize: 12,
+  wordBreak: "break-all",
 };
 
 const checkboxRow: React.CSSProperties = {
