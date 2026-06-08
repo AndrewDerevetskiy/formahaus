@@ -286,6 +286,9 @@ export default function VendorDashboard() {
       stock: "",
       description: "",
       imageUrl: "",
+      model3dUrl: "",
+      aiPhotoUrls: [],
+      ai3dStatus: "idle",
       designerType: "",
       has3DModel: false,
     });
