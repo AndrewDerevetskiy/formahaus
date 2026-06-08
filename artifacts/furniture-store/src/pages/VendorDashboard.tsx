@@ -399,8 +399,26 @@ export default function VendorDashboard() {
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <Link href="/" style={{ textDecoration: "none" }}><button style={whiteBtn}>Відкрити сайт</button></Link>
-            <button onClick={() => { resetForm(); setShowForm(v => !v); setTab("products"); }} style={blueBtn}>+ Додати товар</button>
+            <Link href="/" style={{ textDecoration: "none" }}>
+              <button style={whiteBtn}>Відкрити сайт</button>
+            </Link>
+
+            <Link href={`/vendor/store/${vendorId}`} style={{ textDecoration: "none" }}>
+              <button style={{ ...whiteBtn, background: "#0F172A", color: "#fff" }}>
+                Мій магазин
+              </button>
+            </Link>
+
+            <button
+              onClick={() => {
+                resetForm();
+                setShowForm(v => !v);
+                setTab("products");
+              }}
+              style={blueBtn}
+            >
+              + Додати товар
+            </button>
           </div>
         </section>
 
