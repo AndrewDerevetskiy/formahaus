@@ -161,13 +161,29 @@ export default function Home() {
   }, []);
 
   const allProducts = useMemo(() => {
-    const map = new Map<string, StoreProduct>();
+  const map = new Map<string, StoreProduct>();
 
-    for (const p of apiProducts) map.set(`api_${p.id}`, p);
-    for (const p of vendorProducts) map.set(`vendor_${p.id}`, p);
+  for (const p of apiProducts) map.set(`api_${p.id}`, p);
+  for (const p of vendorProducts) map.set(`vendor_${p.id}`, p);
 
-    return Array.from(map.values());
-  }, [apiProducts, vendorProducts]);
+  map.set("test_divan_forma", {
+    id: "test_divan_forma",
+    source: "api",
+    name: "Диван Forma",
+    category: "Меблі",
+    price: 15000,
+    stock: 10,
+    description: "Тестовий диван",
+    imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=700&q=80",
+    designerType: "sofa",
+    has3DModel: true,
+    vendorName: "FormaHaus",
+    rating: 4.8,
+    reviewsCount: 0,
+  });
+
+  return Array.from(map.values());
+}, [apiProducts, vendorProducts]);
 
   const categories = useMemo(() => {
     const list = Array.from(new Set(allProducts.map(p => p.category).filter(Boolean)));
