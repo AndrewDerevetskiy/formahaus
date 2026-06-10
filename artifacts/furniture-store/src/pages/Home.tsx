@@ -120,7 +120,7 @@ export default function Home() {
 
   function refreshVendorProducts() {
     const localProducts = loadVendorProducts()
-      .filter(p => p.status === "active")
+      .filter((p) => p.status === "active")
       .map(normalizeVendorProduct);
 
     setVendorProducts(localProducts);
@@ -161,39 +161,23 @@ export default function Home() {
   }, []);
 
   const allProducts = useMemo(() => {
-  const map = new Map<string, StoreProduct>();
+    const map = new Map<string, StoreProduct>();
 
-  for (const p of apiProducts) map.set(`api_${p.id}`, p);
-  for (const p of vendorProducts) map.set(`vendor_${p.id}`, p);
+    for (const p of apiProducts) map.set(`api_${p.id}`, p);
+    for (const p of vendorProducts) map.set(`vendor_${p.id}`, p);
 
-  map.set("test_divan_forma", {
-    id: "test_divan_forma",
-    source: "api",
-    name: "Диван Forma",
-    category: "Меблі",
-    price: 15000,
-    stock: 10,
-    description: "Тестовий диван",
-    imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=700&q=80",
-    designerType: "sofa",
-    has3DModel: true,
-    vendorName: "FormaHaus",
-    rating: 4.8,
-    reviewsCount: 0,
-  });
-
-  return Array.from(map.values());
-}, [apiProducts, vendorProducts]);
+    return Array.from(map.values());
+  }, [apiProducts, vendorProducts]);
 
   const categories = useMemo(() => {
-    const list = Array.from(new Set(allProducts.map(p => p.category).filter(Boolean)));
+    const list = Array.from(new Set(allProducts.map((p) => p.category).filter(Boolean)));
     return ["all", ...list];
   }, [allProducts]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
 
-    let list = allProducts.filter(p => {
+    let list = allProducts.filter((p) => {
       if (category !== "all" && p.category !== category) return false;
       if (only3d && !p.has3DModel) return false;
 
@@ -210,7 +194,11 @@ export default function Home() {
     if (sort === "price_low") list = [...list].sort((a, b) => a.price - b.price);
     if (sort === "price_high") list = [...list].sort((a, b) => b.price - a.price);
     if (sort === "stock") list = [...list].sort((a, b) => b.stock - a.stock);
-    if (sort === "new") list = [...list].sort((a, b) => Number(b.source === "vendor_local") - Number(a.source === "vendor_local"));
+    if (sort === "new") {
+      list = [...list].sort(
+        (a, b) => Number(b.source === "vendor_local") - Number(a.source === "vendor_local")
+      );
+    }
 
     return list;
   }, [allProducts, query, category, only3d, sort]);
@@ -322,12 +310,12 @@ export default function Home() {
         <div style={filters} className="home-filters">
           <input
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             placeholder="Пошук: диван, ламінат, плитка, світло, обої..."
             style={input}
           />
 
-          <select value={sort} onChange={e => setSort(e.target.value)} style={input}>
+          <select value={sort} onChange={(e) => setSort(e.target.value)} style={input}>
             <option value="new">Спочатку нові товари</option>
             <option value="price_low">Дешевші</option>
             <option value="price_high">Дорожчі</option>
@@ -335,7 +323,7 @@ export default function Home() {
           </select>
 
           <button
-            onClick={() => setOnly3d(v => !v)}
+            onClick={() => setOnly3d((v) => !v)}
             style={{
               ...secondaryBtn,
               background: only3d ? C.primarySoft : C.card,
@@ -348,7 +336,7 @@ export default function Home() {
         </div>
 
         <div style={categoryRow}>
-          {categories.map(c => (
+          {categories.map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}
@@ -368,7 +356,7 @@ export default function Home() {
           </div>
         ) : (
           <div style={grid}>
-            {filtered.map(product => (
+            {filtered.map((product) => (
               <ProductCard
                 key={`${product.source}_${product.id}`}
                 product={product}
@@ -474,11 +462,14 @@ function ProductCard({ product, onAdd }: { product: StoreProduct; onAdd: () => v
           </button>
 
           <Link href={`/designer?add=${product.designerType}`} style={{ textDecoration: "none" }}>
-            <button disabled={!product.has3DModel} style={{
-              ...threeBtn,
-              opacity: product.has3DModel ? 1 : 0.45,
-              cursor: product.has3DModel ? "pointer" : "not-allowed",
-            }}>
+            <button
+              disabled={!product.has3DModel}
+              style={{
+                ...threeBtn,
+                opacity: product.has3DModel ? 1 : 0.45,
+                cursor: product.has3DModel ? "pointer" : "not-allowed",
+              }}
+            >
               Приміряти в 3D
             </button>
           </Link>
@@ -787,7 +778,7 @@ const cat: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 950,
   textTransform: "uppercase",
-  letterSpacing: .5,
+  letterSpacing: 0.5,
   marginBottom: 6,
 };
 
