@@ -101,7 +101,7 @@ const WALL_OPTIONS = [
 ];
 
 function money(value: number) {
-  return `$${Number(value || 0).toLocaleString("en-US")}`;
+  return `${Number(value || 0).toLocaleString("uk-UA")} ₴`;
 }
 
 function loadVendorProducts(): VendorProduct[] {
@@ -328,38 +328,81 @@ export default function FormaHaus() {
     <div className="fh-pro-app">
       <header className="fh-pro-topbar">
         <Link href="/" className="fh-pro-brand">
-          <div className="fh-pro-logo">F</div>
-          <div className="fh-pro-brand-name">FORMAHAUS</div>
+          <div className="fh-pro-logo">⌂</div>
+          <div className="fh-pro-brand-name">FormaHaus</div>
         </Link>
 
-        <div className="fh-pro-project">
-          <span>Мій проект</span>
-          <b>Кімната {roomDimensions.length}×{roomDimensions.width} м</b>
-          <small>{items.length} об'єктів · {roomArea.toFixed(1)} м² · {money(projectРазом)}</small>
+        <div className="fh-pro-search">
+          <span>⌕</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Пошук товарів, брендів, категорій..." />
         </div>
 
+        <nav className="fh-pro-mainnav">
+          <button>▦ Каталог</button>
+          <button>✦ Натхнення</button>
+          <button>♙ Професіонали</button>
+          <button>▱ Проєкти <b>{items.length}</b></button>
+        </nav>
+
         <div className="fh-pro-top-actions">
-          <button onClick={() => rotateSelected("left")} className="icon-btn">↶</button>
-          <button onClick={() => rotateSelected("right")} className="icon-btn">↷</button>
-          <button className="mode-btn">2D</button>
-          <button className="mode-btn active">3D</button>
-          <button className="icon-btn">📷</button>
-          <button className="icon-btn">⚙</button>
-          <button className="save-btn">Зберегти</button>
-          <Link href="/cart" className="cart-btn">🛒 Кошик</Link>
+          <button className="icon-btn">♡</button>
+          <Link href="/cart" className="cart-btn">🛒 <span>{cart.itemCount}</span></Link>
+          <button className="profile-btn">Андрій <small>Покупець</small></button>
         </div>
       </header>
 
       <main className="fh-pro-workspace">
         <nav className="fh-pro-rail">
-          <RailButton active={tab === "furniture"} icon="🛋" label="Каталог" onClick={() => openTab("furniture")} />
-          <RailButton active={tab === "materials"} icon="▱" label="Матеріали" onClick={() => openTab("materials")} />
-          <RailButton active={false} icon="💡" label="Освітлення" onClick={() => openTab("furniture")} />
-          <RailButton active={false} icon="🌿" label="Декор" onClick={() => setCategoryFilter("Декор")} />
-          <RailButton active={tab === "summary"} icon="＄" label="Кошторис" onClick={() => openTab("summary")} />
-          <RailButton active={tab === "ai"} icon="✦" label="AI Дизайн" onClick={() => openTab("ai")} />
-          <div className="rail-spacer" />
-          <RailButton active={false} icon="?" label="Довідка" onClick={() => alert("Порада: оберіть товар, перетягніть його по кімнаті та додайте проект у кошик.")} />
+          <div className="left-tabs">
+            <button className={tab === "furniture" ? "active" : ""} onClick={() => openTab("furniture")}>Каталог</button>
+            <button className={tab === "materials" ? "active" : ""} onClick={() => openTab("materials")}>Оздоблення</button>
+          </div>
+
+          <SideSection title="Підлога" action="Дивитися все">
+            <div className="tile-grid">
+              {FLOOR_OPTIONS.slice(0, 4).map(option => (
+                <button key={option.id} className="material-tile" onClick={() => changeFloor(option.id)}>
+                  <span style={{ background: option.color }} />
+                  <small>{option.name}</small>
+                </button>
+              ))}
+            </div>
+          </SideSection>
+
+          <SideSection title="Стіни" action="Дивитися все">
+            <div className="tile-grid">
+              {WALL_OPTIONS.slice(0, 4).map(option => (
+                <button key={option.id} className="material-tile" onClick={() => changeWall(option.id)}>
+                  <span style={{ background: option.color }} />
+                  <small>{option.name}</small>
+                </button>
+              ))}
+            </div>
+          </SideSection>
+
+          <SideSection title="Меблі" action="Дивитися все">
+            <div className="mini-category-grid">
+              <button onClick={() => { setCategoryFilter("Меблі"); openTab("furniture"); }}>Дивани</button>
+              <button onClick={() => { setCategoryFilter("Меблі"); openTab("furniture"); }}>Ліжка</button>
+              <button onClick={() => { setCategoryFilter("Меблі"); openTab("furniture"); }}>Шафи</button>
+              <button onClick={() => { setCategoryFilter("Меблі"); openTab("furniture"); }}>Столи</button>
+            </div>
+          </SideSection>
+
+          <SideSection title="Освітлення" action="Дивитися все">
+            <div className="mini-category-grid">
+              <button onClick={() => { setCategoryFilter("Освітлення"); openTab("furniture"); }}>Люстри</button>
+              <button onClick={() => { setCategoryFilter("Освітлення"); openTab("furniture"); }}>Бра</button>
+              <button onClick={() => { setCategoryFilter("Освітлення"); openTab("furniture"); }}>Точкові</button>
+              <button onClick={() => { setCategoryFilter("Освітлення"); openTab("furniture"); }}>Треки</button>
+            </div>
+          </SideSection>
+
+          <div className="ai-side-card" onClick={() => openTab("ai")}>
+            <b>AI Дизайн</b>
+            <p>Створіть дизайн кімнати за допомогою штучного інтелекту</p>
+            <span>✦</span>
+          </div>
         </nav>
 
         <section className="fh-pro-stage">
@@ -378,9 +421,25 @@ export default function FormaHaus() {
             </Canvas>
 
             <div className="scene-top-tools">
-              <button>Вид зверху</button>
-              <button>Камера</button>
-              <button>Рендер</button>
+              <button onClick={() => openTab("furniture")}>▦ Кімната</button>
+              <button onClick={() => openTab("materials")}>⌗ Розміри</button>
+              <button onClick={() => openTab("materials")}>▱ Підлога</button>
+              <button onClick={() => openTab("materials")}>▥ Стіни</button>
+              <button onClick={() => setCategoryFilter("Освітлення")}>☼ Освітлення</button>
+              <button onClick={() => setCategoryFilter("Декор")}>✧ Декор</button>
+            </div>
+
+            <div className="mode-switch">
+              <button>2D</button>
+              <button className="active">3D</button>
+            </div>
+
+            <div className="mini-map">
+              <div className="mini-room">
+                <span />
+                <span />
+                <b>{items.length}</b>
+              </div>
             </div>
 
             {selected && (
@@ -479,48 +538,54 @@ export default function FormaHaus() {
         </section>
 
         <aside className="fh-pro-inspector">
-          <div className="inspector-card selected-card">
-            <div className="inspector-head"><b>Вибраний об'єкт</b><button onClick={() => setSelectedId("")}>×</button></div>
-            <div className="selected-product-preview">
-              {selectedCatalogItem.imageUrl ? <img src={selectedCatalogItem.imageUrl} alt={selectedCatalogItem.name} /> : <div className="image-fallback">3D</div>}
+          <div className="project-panel">
+            <div className="project-head">
               <div>
-                <h3>{selectedCatalogItem.name}</h3>
-                <strong>{money(selectedCatalogItem.price)}</strong>
-                <span>Продавець: {selectedCatalogItem.sellerName || "FormaHaus"}</span>
-                <em>3D модель</em>
+                <b>Мій проєкт</b>
+                <small>Кімната {roomDimensions.length}×{roomDimensions.width} м · {roomArea.toFixed(1)} м²</small>
               </div>
+              <button className="save-green">Зберегти</button>
+            </div>
+
+            <div className="estimate-card">
+              <div className="estimate-total"><span>Кошторис</span><b>{money(projectРазом)}</b></div>
+              <SummaryRow label="Меблі" value={money(furnitureРазом)} />
+              <SummaryRow label="Оздоблення" value={money(floorРазом + wallРазом)} />
+              <SummaryRow label="Освітлення" value="0 ₴" />
+              <SummaryRow label="Декор" value="0 ₴" />
+              <button className="details-link" onClick={() => openTab("summary")}>Детальний кошторис →</button>
             </div>
           </div>
 
-          <InspectorBlock title="Параметри кімнати">
-            <RoomDimensionInputs dimensions={roomDimensions} onChange={updateRoomDimension} />
-          </InspectorBlock>
+          <div className="products-panel">
+            <div className="products-head">
+              <b>Список товарів ({items.length})</b>
+              <button onClick={() => openTab("furniture")}>Редагувати</button>
+            </div>
 
-          <InspectorBlock title="Позиція">
-            <div className="triple-grid"><FieldBox label="X" value="2.45 м" /><FieldBox label="Y" value="0.00 м" /><FieldBox label="Z" value="1.32 м" /></div>
-          </InspectorBlock>
+            <div className="order-list">
+              {items.length === 0 ? (
+                <div className="empty-order">
+                  <b>Додайте товари</b>
+                  <span>Оберіть меблі, підлогу, світло або декор у каталозі зліва.</span>
+                </div>
+              ) : (
+                items.map(item => (
+                  <div key={item.instanceId} className="order-item">
+                    {item.imageUrl ? <img src={item.imageUrl} alt={item.name} /> : <div className="order-img-fallback">3D</div>}
+                    <div>
+                      <b>{item.name}</b>
+                      <span>{item.category}</span>
+                      <strong>{money(item.price)}</strong>
+                      <div className="qty-row"><button>−</button><em>1</em><button>+</button></div>
+                    </div>
+                    <button className="trash" onClick={() => { setItems(prev => prev.filter(i => i.instanceId !== item.instanceId)); cart.removeItem(item.instanceId); if (selectedId === item.instanceId) setSelectedId(""); }}>🗑</button>
+                  </div>
+                ))
+              )}
+            </div>
 
-          <InspectorBlock title="Поворот">
-            <div className="rotation-control"><button onClick={() => rotateSelected("left")}>−</button><strong>45°</strong><button onClick={() => rotateSelected("right")}>+</button></div>
-          </InspectorBlock>
-
-          <InspectorBlock title="Розмір">
-            <div className="triple-grid"><FieldBox label="Ш" value="2.10 м" /><FieldBox label="Г" value="0.95 м" /><FieldBox label="В" value="0.85 м" /></div>
-          </InspectorBlock>
-
-          <InspectorBlock title="Додатково">
-            <ToggleRow label="Тіні" />
-            <ToggleRow label="Прив'язка до сітки" />
-            <button className="delete-btn" onClick={removeSelected}>🗑 Видалити об'єкт</button>
-          </InspectorBlock>
-
-          <div className="inspector-card cost-card">
-            <div className="cost-head"><b>Кошторис проекту</b><strong>{money(projectРазом)}</strong></div>
-            <SummaryRow label="Меблі" value={money(furnitureРазом)} />
-            <SummaryRow label={`Підлога · ${roomArea.toFixed(1)} м²`} value={money(floorРазом)} />
-            <SummaryRow label={`Стіни та обої · ${wallArea.toFixed(1)} м²`} value={money(wallРазом)} />
-            <SummaryRow label="Освітлення" value="$0" />
-            <Link href="/cart" className="checkout-pro">Перейти до кошика ({cart.itemCount})</Link>
+            <Link href="/cart" className="checkout-pro">Оформити замовлення</Link>
           </div>
         </aside>
       </main>
@@ -540,6 +605,15 @@ export default function FormaHaus() {
 
 function RailButton({ active, icon, label, onClick }: { active: boolean; icon: string; label: string; onClick: () => void }) {
   return <button className={`rail-btn ${active ? "active" : ""}`} onClick={onClick}><span>{icon}</span><small>{label}</small></button>;
+}
+
+function SideSection({ title, action, children }: { title: string; action: string; children: ReactNode }) {
+  return (
+    <section className="side-section">
+      <div className="side-section-head"><b>{title}</b><span>{action}</span></div>
+      {children}
+    </section>
+  );
 }
 
 function ProductCard({ item, onAdd }: { item: КаталогItem; onAdd: () => void }) {
@@ -618,162 +692,175 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 }
 
 const styles = `
-  :root { color-scheme: dark; }
-  .fh-pro-app { position: fixed; inset: 0; background: #071018; color: #F8FAFC; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; }
-  .fh-pro-topbar { height: 74px; padding: 0 20px; display: grid; grid-template-columns: 270px minmax(180px,1fr) auto; align-items: center; gap: 18px; background: linear-gradient(180deg,#0B121C,#080E15); border-bottom: 1px solid rgba(148,163,184,.16); box-shadow: 0 18px 60px rgba(0,0,0,.35); }
-  .fh-pro-brand { text-decoration: none; color: inherit; display: flex; align-items: center; gap: 13px; }
-  .fh-pro-logo { width: 44px; height: 44px; border-radius: 14px; background: #fff; color: #0B1220; display: grid; place-items: center; font-size: 25px; font-weight: 950; }
-  .fh-pro-brand-name { font-weight: 950; letter-spacing: 4px; font-size: 20px; }
-  .fh-pro-project { border-left: 1px solid rgba(148,163,184,.2); padding-left: 20px; display: flex; flex-direction: column; line-height: 1.15; }
-  .fh-pro-project span { color: #98A2B3; font-size: 12px; }
-  .fh-pro-project b { color: #fff; font-size: 16px; margin-top: 2px; }
-  .fh-pro-project small { color: #94A3B8; font-size: 12px; margin-top: 4px; }
-  .fh-pro-top-actions { display: flex; align-items: center; gap: 9px; justify-content: flex-end; }
-  .icon-btn,.mode-btn,.save-btn,.cart-btn { height: 42px; border-radius: 14px; border: 1px solid rgba(148,163,184,.18); background: rgba(15,23,42,.78); color: #F8FAFC; padding: 0 14px; font-weight: 900; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
-  .icon-btn { width: 44px; padding: 0; font-size: 18px; }
-  .mode-btn.active { background: linear-gradient(135deg,#6D45D8,#3B82F6); border-color: rgba(167,139,250,.8); }
-  .save-btn { background: rgba(255,255,255,.08); }
-  .cart-btn { background: #C49469; color: #fff; border-color: #C49469; min-width: 110px; }
+  :root { color-scheme: light; }
+  .fh-pro-app { position: fixed; inset: 0; background: #F6F3EE; color: #1F2A24; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; overflow: hidden; }
+  .fh-pro-topbar { height: 78px; padding: 0 24px; display: grid; grid-template-columns: 220px minmax(220px, 1fr) auto auto; align-items: center; gap: 22px; background: rgba(255,255,255,.92); border-bottom: 1px solid #E8E2D9; box-shadow: 0 14px 42px rgba(35,55,42,.06); backdrop-filter: blur(18px); }
+  .fh-pro-brand { text-decoration: none; color: inherit; display: flex; align-items: center; gap: 10px; }
+  .fh-pro-logo { width: 34px; height: 34px; border-radius: 12px; background: #EAF5EC; color: #2E8B4E; display: grid; place-items: center; font-size: 21px; font-weight: 950; }
+  .fh-pro-brand-name { font-weight: 950; letter-spacing: -.7px; font-size: 25px; }
+  .fh-pro-search { height: 46px; max-width: 520px; display:flex; align-items:center; gap: 10px; padding: 0 16px; background: #F4F3F1; border: 1px solid #EFE9E2; border-radius: 16px; color: #7B887B; }
+  .fh-pro-search input { width:100%; border:0; outline:0; background:transparent; font-size:14px; color:#223026; font-weight:750; }
+  .fh-pro-mainnav { display:flex; align-items:center; gap: 18px; white-space:nowrap; }
+  .fh-pro-mainnav button { border:0; background:transparent; color:#1F2A24; font-size:14px; font-weight:850; cursor:pointer; display:flex; align-items:center; gap:7px; }
+  .fh-pro-mainnav b { min-width:22px; height:22px; border-radius:999px; background:#2E9D51; color:#fff; display:inline-grid; place-items:center; font-size:12px; }
+  .fh-pro-top-actions { display:flex; align-items:center; justify-content:flex-end; gap: 10px; }
+  .icon-btn,.cart-btn,.profile-btn { height: 44px; border-radius: 15px; border: 1px solid #ECE7DF; background: #fff; color: #1F2A24; padding: 0 14px; font-weight: 900; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(50,60,50,.04); }
+  .icon-btn { width:44px; padding:0; font-size:20px; }
+  .cart-btn { gap:6px; }
+  .cart-btn span { min-width:18px; height:18px; border-radius:50%; display:grid; place-items:center; background:#2E9D51; color:#fff; font-size:11px; }
+  .profile-btn { flex-direction:column; align-items:flex-start; line-height:1.05; padding: 0 16px; }
+  .profile-btn small { color:#7A8278; font-size:11px; }
 
-  .fh-pro-workspace { height: calc(100vh - 74px); display: grid; grid-template-columns: 92px minmax(0,1fr) 320px; overflow: hidden; }
-  .fh-pro-rail { background: #0A111A; border-right: 1px solid rgba(148,163,184,.15); padding: 16px 10px; display: flex; flex-direction: column; gap: 12px; }
-  .rail-btn { border: 1px solid transparent; min-height: 82px; border-radius: 18px; background: transparent; color: #D1D5DB; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; cursor: pointer; }
-  .rail-btn span { font-size: 25px; }
-  .rail-btn small { font-size: 12px; font-weight: 800; }
-  .rail-btn.active { background: linear-gradient(135deg,#6D45D8,#3B2F9A); color: #fff; box-shadow: 0 18px 36px rgba(109,69,216,.28); }
-  .rail-spacer { flex: 1; }
+  .fh-pro-workspace { height: calc(100vh - 78px); display: grid; grid-template-columns: 314px minmax(0,1fr) 348px; gap: 14px; padding: 14px; overflow: hidden; }
+  .fh-pro-rail { min-width:0; background: rgba(255,255,255,.92); border: 1px solid #E8E2D9; border-radius: 24px; padding: 14px; overflow:auto; box-shadow: 0 20px 55px rgba(35,55,42,.07); }
+  .left-tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+  .left-tabs button { height: 46px; border:0; border-radius: 14px; background:#F7F4EF; color:#1F2A24; font-size:14px; font-weight:900; cursor:pointer; }
+  .left-tabs button.active { background:#EAF7EE; color:#2E8B4E; }
+  .side-section { margin-bottom: 18px; }
+  .side-section-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .side-section-head b { font-size:14px; }
+  .side-section-head span { font-size:12px; color:#627162; font-weight:800; }
+  .tile-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .material-tile { border:0; background:transparent; padding:0; cursor:pointer; color:#233027; text-align:left; }
+  .material-tile span { display:block; height:72px; border-radius:12px; border:1px solid #E8E2D9; box-shadow: inset 0 0 0 1px rgba(255,255,255,.45); margin-bottom:6px; }
+  .material-tile small { display:block; font-size:11px; font-weight:850; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mini-category-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .mini-category-grid button { min-height: 66px; border:1px solid #E8E2D9; background:#F7F5F1; border-radius:13px; font-size:12px; font-weight:900; color:#223026; cursor:pointer; }
+  .ai-side-card { margin-top: 18px; min-height: 154px; border-radius: 20px; padding:18px; background: linear-gradient(135deg,#E8F7EC,#F4FBF5); border:1px solid #DCEFE0; cursor:pointer; position:relative; overflow:hidden; }
+  .ai-side-card b { color:#1C7D3E; font-size:17px; }
+  .ai-side-card p { color:#52645A; font-size:13px; line-height:1.5; margin:10px 0 0; max-width:180px; }
+  .ai-side-card span { position:absolute; right:18px; bottom:12px; color:#33A95D; font-size:34px; }
 
-  .fh-pro-stage { min-width: 0; display: grid; grid-template-rows: minmax(390px, 58vh) minmax(270px, 1fr); background: #09111B; border-right: 1px solid rgba(148,163,184,.14); }
-  .canvas-card { position: relative; margin: 14px; margin-bottom: 0; overflow: hidden; border-radius: 18px; background: radial-gradient(circle at top,#1C293A,#0A111A); border: 1px solid rgba(148,163,184,.18); box-shadow: 0 25px 90px rgba(0,0,0,.45); }
-  .scene-top-tools { position:absolute; top:14px; left:18px; display:flex; gap:8px; z-index:5; }
-  .scene-top-tools button,.walk-btn { border:none; background: rgba(15,23,42,.72); color:#fff; border-radius: 10px; padding:9px 12px; font-size:12px; font-weight:850; backdrop-filter: blur(12px); }
-  .walk-btn { position:absolute; top:14px; right:18px; z-index:5; }
-  .object-float-tools { position:absolute; left:50%; top:48%; transform:translate(-50%,-50%); display:flex; gap:8px; padding:9px; border-radius:16px; background:rgba(8,13,20,.82); border:1px solid rgba(255,255,255,.12); backdrop-filter:blur(14px); z-index:6; box-shadow:0 18px 38px rgba(0,0,0,.35); }
-  .object-float-tools button { width:36px; height:36px; border:0; border-radius:12px; background:rgba(255,255,255,.08); color:#fff; font-weight:900; cursor:pointer; }
-  .view-tools { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(8,13,20,.72); border:1px solid rgba(255,255,255,.12); backdrop-filter:blur(14px); border-radius:18px; padding:8px; display:flex; gap:8px; z-index:5; }
-  .view-tools button { width:42px; height:42px; border:0; border-radius:14px; background:transparent; color:#fff; font-size:18px; }
-  .nav-cube { position:absolute; right:24px; bottom:24px; width:74px; height:74px; border-radius:22px; display:grid; place-items:center; background:rgba(15,23,42,.52); color:#fff; font-size:28px; z-index:5; border:1px solid rgba(255,255,255,.12); }
+  .fh-pro-stage { min-width:0; display: grid; grid-template-rows: minmax(430px, 1fr) 230px; gap: 14px; overflow:hidden; }
+  .canvas-card { position: relative; overflow: hidden; border-radius: 24px; background: radial-gradient(circle at top,#fff,#F0E9DF); border: 1px solid #E8E2D9; box-shadow: 0 22px 70px rgba(35,55,42,.09); }
+  .scene-top-tools { position:absolute; top:14px; left:14px; right:84px; z-index:5; display:flex; gap:8px; overflow:auto; padding-bottom:4px; }
+  .scene-top-tools button { border:1px solid #E8E2D9; background:rgba(255,255,255,.92); color:#1F2A24; border-radius: 13px; padding: 10px 13px; font-size:13px; font-weight:900; backdrop-filter: blur(14px); white-space:nowrap; box-shadow:0 8px 18px rgba(40,50,40,.06); }
+  .mode-switch { position:absolute; top:14px; right:14px; display:flex; gap:5px; z-index:7; background:#fff; border:1px solid #E8E2D9; padding:5px; border-radius:15px; }
+  .mode-switch button { border:0; background:transparent; color:#809083; height:34px; min-width:42px; border-radius:11px; font-weight:950; }
+  .mode-switch button.active { background:#E8F6EC; color:#2E9D51; }
+  .mini-map { position:absolute; right:18px; top:82px; width:180px; height:136px; border-radius:18px; background:rgba(255,255,255,.78); border:1px solid #E8E2D9; backdrop-filter: blur(16px); z-index:6; display:grid; place-items:center; box-shadow:0 16px 40px rgba(36,50,42,.12); }
+  .mini-room { width:130px; height:88px; border:6px solid #435047; background:#EFE6D8; position:relative; border-radius:4px; }
+  .mini-room span:nth-child(1) { position:absolute; left:20px; top:16px; width:30px; height:22px; border-radius:8px; background:#CADBC6; }
+  .mini-room span:nth-child(2) { position:absolute; right:20px; bottom:16px; width:34px; height:24px; border-radius:8px; background:#CADBC6; }
+  .mini-room b { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:28px; height:28px; border-radius:50%; display:grid; place-items:center; background:#2E9D51; color:#fff; font-size:12px; }
+  .walk-btn { position:absolute; left:18px; top:76px; z-index:5; border:1px solid #E8E2D9; background:rgba(255,255,255,.9); color:#1F2A24; border-radius: 12px; padding: 10px 12px; font-size:12px; font-weight:900; }
+  .object-float-tools { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:flex; gap:8px; padding:9px; border-radius:16px; background:rgba(255,255,255,.92); border:1px solid #D8E3DD; backdrop-filter:blur(14px); z-index:6; box-shadow:0 18px 38px rgba(34,80,120,.20); }
+  .object-float-tools button { width:36px; height:36px; border:0; border-radius:12px; background:#F2F6F2; color:#183227; font-weight:900; cursor:pointer; }
+  .view-tools { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.94); border:1px solid #E8E2D9; backdrop-filter:blur(14px); border-radius:18px; padding:7px; display:flex; gap:6px; z-index:5; box-shadow:0 14px 35px rgba(36,50,42,.13); }
+  .view-tools button { width:40px; height:38px; border:0; border-radius:12px; background:transparent; color:#1E2A24; font-size:17px; }
+  .nav-cube { display:none; }
 
-  .fh-pro-bottom-panel { min-height:0; margin:0 14px 14px; overflow:auto; background:linear-gradient(180deg,rgba(12,20,30,.96),rgba(7,12,20,.98)); border:1px solid rgba(148,163,184,.16); border-top:0; border-radius:0 0 18px 18px; padding:0 16px 16px; }
-  .bottom-tabs { position:sticky; top:0; display:flex; gap:34px; padding:17px 0 13px; background:rgba(8,13,20,.96); z-index:4; border-bottom:1px solid rgba(148,163,184,.14); }
-  .bottom-tabs button { border:0; background:transparent; color:#B6C2D1; font-size:16px; font-weight:850; padding:0 2px 11px; cursor:pointer; }
+  .fh-pro-bottom-panel { min-height:0; overflow:auto; background:rgba(255,255,255,.94); border:1px solid #E8E2D9; border-radius: 24px; padding: 14px 16px; box-shadow: 0 16px 50px rgba(35,55,42,.06); }
+  .bottom-tabs { display:flex; gap:24px; align-items:center; padding:0 0 12px; border-bottom:1px solid #EAE4DC; }
+  .bottom-tabs button { border:0; background:transparent; color:#7A8278; font-size:14px; font-weight:900; padding: 0; cursor:pointer; }
+  .bottom-tabs button.active { color:#2E9D51; }
   .mobile-panel-close { display:none; }
-  .bottom-tabs button.active { color:#fff; border-bottom:2px solid #8B5CF6; }
-  .catalog-filter-bar { display:grid; grid-template-columns:1fr 160px; gap:12px; margin:16px 0 10px; }
-  .search-wrap { height:45px; border:1px solid rgba(148,163,184,.2); background:#0B141F; border-radius:14px; display:flex; align-items:center; gap:10px; padding:0 13px; color:#94A3B8; }
-  .search-wrap input,.catalog-filter-bar select { width:100%; border:0; outline:0; background:transparent; color:#E5E7EB; font-weight:800; font-size:14px; }
-  .catalog-filter-bar select { border:1px solid rgba(148,163,184,.2); background:#0B141F; border-radius:14px; padding:0 12px; }
-  .chips-row { display:flex; gap:9px; overflow:auto; padding-bottom:8px; }
-  .chips-row button { border:1px solid rgba(148,163,184,.22); background:transparent; color:#D1D5DB; padding:9px 16px; border-radius:999px; white-space:nowrap; font-weight:850; cursor:pointer; }
-  .chips-row button.active { background:#6D45D8; border-color:#6D45D8; color:#fff; }
-  .section-line { display:flex; align-items:center; justify-content:space-between; margin:14px 0 12px; }
+  .catalog-filter-bar { display:grid; grid-template-columns:1fr 160px; gap:10px; margin:12px 0 10px; }
+  .search-wrap { height:42px; border:1px solid #E8E2D9; background:#F9F8F5; border-radius:14px; display:flex; align-items:center; gap:10px; padding:0 13px; color:#7A8278; }
+  .search-wrap input,.catalog-filter-bar select { width:100%; border:0; outline:0; background:transparent; color:#1F2A24; font-weight:800; font-size:13px; }
+  .catalog-filter-bar select { border:1px solid #E8E2D9; background:#F9F8F5; border-radius:14px; padding:0 12px; }
+  .chips-row { display:flex; gap:8px; overflow:auto; padding-bottom:8px; }
+  .chips-row button { border:1px solid #E8E2D9; background:#fff; color:#4F5E53; padding:8px 14px; border-radius:999px; white-space:nowrap; font-weight:850; cursor:pointer; }
+  .chips-row button.active { background:#E8F6EC; border-color:#D7EEDC; color:#2E8B4E; }
+  .section-line { display:flex; align-items:center; justify-content:space-between; margin:12px 0; }
   .section-line b { font-size:16px; }
-  .section-line span { color:#A78BFA; font-size:13px; font-weight:850; }
-  .product-strip { display:grid; grid-template-columns:repeat(5,minmax(150px,1fr)); gap:12px; }
-  .pro-product-card { background:#111A26; border:1px solid rgba(148,163,184,.16); border-radius:14px; padding:9px; min-width:0; }
-  .product-img-wrap { height:128px; border-radius:12px; overflow:hidden; position:relative; background:#E5E7EB; }
+  .section-line span { color:#2E9D51; font-size:13px; font-weight:850; }
+  .product-strip { display:flex; gap:12px; overflow:auto; padding-bottom:8px; }
+  .pro-product-card { background:#fff; border:1px solid #E8E2D9; border-radius:16px; padding:9px; min-width:148px; box-shadow:0 8px 20px rgba(35,55,42,.05); }
+  .product-img-wrap { height:112px; border-radius:13px; overflow:hidden; position:relative; background:#F1EEE8; }
   .product-img-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
-  .badge-3d { position:absolute; left:8px; top:8px; background:#5FA761; color:white; font-size:12px; font-weight:950; padding:4px 7px; border-radius:8px; }
-  .heart { position:absolute; right:8px; top:8px; width:28px; height:28px; border:0; border-radius:9px; background:rgba(255,255,255,.78); color:#64748B; font-size:18px; }
-  .pro-product-name { color:#fff; font-size:13px; font-weight:800; margin-top:10px; min-height:34px; }
-  .pro-product-price { color:#F8FAFC; font-weight:950; margin:6px 0 9px; }
-  .add-product-btn { width:100%; border:0; border-radius:11px; height:34px; background:linear-gradient(135deg,#6D45D8,#8B5CF6); color:white; font-weight:950; cursor:pointer; }
-  .product-placeholder { width:100%; height:100%; display:grid; place-items:center; color:#111; font-weight:950; }
+  .badge-3d { position:absolute; left:8px; top:8px; background:#E8F6EC; color:#2E8B4E; font-size:11px; font-weight:950; padding:4px 7px; border-radius:8px; }
+  .heart { position:absolute; right:8px; top:8px; width:28px; height:28px; border:0; border-radius:9px; background:rgba(255,255,255,.84); color:#64756A; font-size:18px; }
+  .pro-product-name { color:#1F2A24; font-size:13px; font-weight:900; margin-top:9px; min-height:34px; }
+  .pro-product-price { color:#1F2A24; font-weight:950; margin:5px 0 8px; }
+  .add-product-btn { width:100%; border:0; border-radius:11px; height:34px; background:#2E9D51; color:white; font-weight:950; cursor:pointer; }
+  .product-placeholder { width:100%; height:100%; display:grid; place-items:center; color:#1F2A24; font-weight:950; }
 
-  .materials-layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; padding-top:14px; }
-  .room-settings-panel { grid-column:1 / -1; background:#111A26; border:1px solid rgba(148,163,184,.16); border-radius:16px; padding:12px; }
+  .materials-layout { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding-top:12px; }
+  .room-settings-panel,.summary-large,.ai-panel { background:#fff; border:1px solid #E8E2D9; border-radius:18px; padding:14px; }
+  .room-settings-panel { grid-column:1 / -1; }
   .room-dimension-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-  .room-dimension-grid label { display:flex; flex-direction:column; gap:7px; color:#CBD5E1; font-size:12px; font-weight:900; }
-  .room-dimension-grid input { width:100%; box-sizing:border-box; border:1px solid rgba(148,163,184,.2); background:#0B141F; color:#fff; border-radius:12px; padding:11px 10px; outline:0; font-size:15px; font-weight:950; }
-
+  .room-dimension-grid label { display:flex; flex-direction:column; gap:7px; color:#627162; font-size:12px; font-weight:900; }
+  .room-dimension-grid input { width:100%; box-sizing:border-box; border:1px solid #E8E2D9; background:#F9F8F5; color:#1F2A24; border-radius:12px; padding:11px 10px; outline:0; font-size:15px; font-weight:950; }
   .material-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-  .material-chip { border:1px solid rgba(148,163,184,.18); background:#111A26; color:#E5E7EB; border-radius:12px; padding:8px; cursor:pointer; }
-  .material-chip span { display:block; height:54px; border-radius:10px; border:1px solid rgba(255,255,255,.18); margin-bottom:7px; }
+  .material-chip { border:1px solid #E8E2D9; background:#fff; color:#1F2A24; border-radius:12px; padding:8px; cursor:pointer; }
+  .material-chip span { display:block; height:54px; border-radius:10px; border:1px solid rgba(0,0,0,.08); margin-bottom:7px; }
   .material-chip small { font-weight:800; font-size:12px; }
-  .material-chip.active { border-color:#8B5CF6; box-shadow:0 0 0 2px rgba(139,92,246,.25); }
-  .summary-large,.ai-panel { max-width:620px; padding:18px; border-radius:18px; background:#111A26; border:1px solid rgba(148,163,184,.16); margin-top:16px; }
-  .ai-panel p { color:#94A3B8; line-height:1.55; }
+  .material-chip.active { border-color:#2E9D51; box-shadow:0 0 0 3px rgba(46,157,81,.14); }
+  .ai-panel p { color:#627162; line-height:1.55; }
   .ai-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:16px 0; }
-  .ai-grid button,.ai-main { border:1px solid rgba(139,92,246,.45); color:#fff; background:rgba(139,92,246,.15); border-radius:13px; padding:12px; font-weight:900; }
-  .ai-main { width:100%; background:linear-gradient(135deg,#6D45D8,#C084FC); }
+  .ai-grid button,.ai-main { border:1px solid #D7EEDC; color:#1F2A24; background:#F2FBF4; border-radius:13px; padding:12px; font-weight:900; }
+  .ai-main { width:100%; background:#2E9D51; color:#fff; }
 
-  .fh-pro-inspector { min-width:0; background:#0A111A; padding:14px; overflow:auto; display:flex; flex-direction:column; gap:14px; }
-  .inspector-card { background:#101923; border:1px solid rgba(148,163,184,.16); border-radius:18px; padding:16px; }
-  .inspector-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
-  .inspector-head button { border:0; background:transparent; color:#CBD5E1; font-size:24px; }
-  .selected-product-preview { display:grid; grid-template-columns:105px 1fr; gap:13px; align-items:center; }
-  .selected-product-preview img,.image-fallback { width:105px; height:92px; object-fit:cover; border-radius:14px; background:#E5E7EB; }
-  .image-fallback { display:grid; place-items:center; color:#111; font-weight:950; }
-  .selected-product-preview h3 { margin:0 0 6px; font-size:16px; }
-  .selected-product-preview strong { display:block; font-size:20px; margin-bottom:7px; }
-  .selected-product-preview span { color:#94A3B8; display:block; font-size:12px; }
-  .selected-product-preview em { display:inline-block; margin-top:8px; color:#7CFF9B; background:rgba(34,197,94,.12); border-radius:999px; padding:5px 9px; font-style:normal; font-size:12px; font-weight:950; }
-  .inspector-card h4 { margin:0 0 12px; font-size:15px; }
-  .triple-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-  .field-box { background:#0B141F; border:1px solid rgba(148,163,184,.14); border-radius:11px; padding:9px; }
-  .field-box span { display:block; color:#94A3B8; font-size:11px; margin-bottom:5px; }
-  .field-box b { font-size:13px; }
-  .rotation-control { display:grid; grid-template-columns:44px 1fr 44px; gap:10px; align-items:center; }
-  .rotation-control button { height:44px; border:0; border-radius:13px; background:#172334; color:#fff; font-size:20px; }
-  .rotation-control strong { text-align:center; display:block; font-size:30px; color:#8B5CF6; }
-  .toggle-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; color:#CBD5E1; }
-  .toggle-row b { width:42px; height:24px; border-radius:999px; background:#8B5CF6; position:relative; }
-  .toggle-row b:after { content:""; position:absolute; right:3px; top:3px; width:18px; height:18px; border-radius:50%; background:#fff; }
-  .delete-btn,.checkout-pro,.summary-checkout { width:100%; height:44px; border:0; border-radius:13px; background:linear-gradient(135deg,#7C2D12,#EF4444); color:#fff; font-weight:950; cursor:pointer; margin-top:12px; text-decoration:none; display:flex; align-items:center; justify-content:center; }
-  .checkout-pro,.summary-checkout { background:linear-gradient(135deg,#6D45D8,#8B5CF6); }
-  .cost-head,.summary-total { display:flex; justify-content:space-between; gap:14px; align-items:center; margin-bottom:12px; }
-  .cost-head strong,.summary-total b { font-size:22px; }
-  .summary-row { display:flex; justify-content:space-between; gap:10px; padding:8px 0; color:#CBD5E1; font-size:14px; }
-  .summary-row b { color:#fff; }
+  .fh-pro-inspector { min-width:0; display:flex; flex-direction:column; gap:14px; overflow:auto; }
+  .project-panel,.products-panel { background:rgba(255,255,255,.94); border:1px solid #E8E2D9; border-radius:24px; padding:16px; box-shadow:0 20px 55px rgba(35,55,42,.07); }
+  .project-head,.products-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; }
+  .project-head b,.products-head b { font-size:18px; }
+  .project-head small { display:block; color:#667368; font-size:12px; margin-top:4px; }
+  .save-green,.products-head button,.details-link { border:0; background:#EAF7EE; color:#2E8B4E; border-radius:12px; height:36px; padding:0 12px; font-weight:900; cursor:pointer; }
+  .estimate-card { border-radius:18px; background:#fff; }
+  .estimate-total { display:flex; justify-content:space-between; align-items:center; margin: 0 0 12px; }
+  .estimate-total span { color:#1F2A24; font-weight:900; }
+  .estimate-total b { font-size:22px; }
+  .summary-row { display:flex; justify-content:space-between; gap:10px; padding:9px 0; color:#56645A; font-size:14px; }
+  .summary-row b { color:#1F2A24; }
+  .details-link { margin-top:8px; background:transparent; padding:0; height:auto; }
+  .order-list { display:flex; flex-direction:column; gap:12px; max-height: calc(100vh - 420px); overflow:auto; padding-right:2px; }
+  .empty-order { border:1px dashed #D9D0C5; border-radius:16px; padding:18px; display:flex; flex-direction:column; gap:6px; color:#667368; }
+  .empty-order b { color:#1F2A24; }
+  .order-item { display:grid; grid-template-columns:78px 1fr 26px; gap:12px; align-items:center; }
+  .order-item img,.order-img-fallback { width:78px; height:78px; border-radius:14px; object-fit:cover; background:#F1EEE8; display:grid; place-items:center; color:#2E8B4E; font-weight:950; }
+  .order-item b { display:block; font-size:13px; line-height:1.2; }
+  .order-item span { display:block; color:#6B786D; font-size:12px; margin-top:3px; }
+  .order-item strong { display:block; font-size:13px; margin-top:4px; }
+  .qty-row { display:inline-flex; align-items:center; gap:6px; margin-top:6px; background:#F7F5F1; border-radius:999px; padding:2px; }
+  .qty-row button { border:0; background:#fff; width:22px; height:22px; border-radius:50%; color:#2E8B4E; font-weight:950; }
+  .qty-row em { font-style:normal; font-size:12px; font-weight:900; min-width:14px; text-align:center; }
+  .trash { border:0; background:transparent; cursor:pointer; opacity:.6; }
+  .checkout-pro,.summary-checkout { width:100%; height:52px; border:0; border-radius:15px; background:#2E9D51; color:#fff; font-weight:950; cursor:pointer; margin-top:14px; text-decoration:none; display:flex; align-items:center; justify-content:center; box-shadow:0 16px 30px rgba(46,157,81,.22); }
 
+  .inspector-card,.rail-btn,.cost-card,.selected-card,.field-box,.rotation-control,.toggle-row,.delete-btn,.cost-head,.summary-total { }
   .mobile-pro-nav { display:none; }
 
   @media (max-width: 1180px) {
-    .fh-pro-workspace { grid-template-columns:82px minmax(0,1fr); }
+    .fh-pro-topbar { grid-template-columns: 200px 1fr auto; }
+    .fh-pro-mainnav { display:none; }
+    .fh-pro-workspace { grid-template-columns: 290px minmax(0,1fr); }
     .fh-pro-inspector { display:none; }
-    .product-strip { grid-template-columns:repeat(4,minmax(140px,1fr)); }
   }
 
   @media (max-width: 820px) {
-    .fh-pro-topbar { height:64px; padding:0 14px; grid-template-columns:1fr auto; }
-    .fh-pro-project { display:none; }
-    .fh-pro-brand-name { font-size:18px; letter-spacing:3px; }
-    .fh-pro-logo { width:42px; height:42px; }
-    .fh-pro-top-actions .icon-btn,.fh-pro-top-actions .mode-btn,.fh-pro-top-actions .save-btn { display:none; }
-    .cart-btn { height:44px; min-width:92px; }
-    .fh-pro-workspace { height:calc(100vh - 64px - 80px); grid-template-columns:1fr; grid-template-rows:1fr; overflow:hidden; }
+    .fh-pro-topbar { height:64px; padding:0 12px; grid-template-columns: 1fr auto; gap:10px; }
+    .fh-pro-search,.fh-pro-mainnav,.profile-btn,.fh-pro-top-actions .icon-btn { display:none; }
+    .fh-pro-brand-name { font-size:22px; }
+    .fh-pro-workspace { height:calc(100vh - 64px - 76px); display:block; padding:10px; overflow:hidden; }
     .fh-pro-rail { display:none; }
-    .fh-pro-stage { display:block; position:relative; min-height:0; overflow:hidden; }
-    .canvas-card { height:calc(100vh - 64px - 92px); margin:10px; border-radius:22px; }
-    .scene-top-tools,.walk-btn,.nav-cube { display:none; }
-    .object-float-tools { top:54%; }
-    .view-tools { bottom:14px; }
-    .fh-pro-bottom-panel { position:fixed; left:10px; right:10px; bottom:88px; max-height:52vh; min-height:290px; overflow:auto; margin:0; border-radius:24px; border:1px solid rgba(148,163,184,.22); padding:0 12px 14px; z-index:45; box-shadow:0 -18px 70px rgba(0,0,0,.62); transform:translateY(calc(100% + 110px)); opacity:0; pointer-events:none; transition:transform .22s ease, opacity .22s ease; }
+    .fh-pro-stage { height:100%; display:block; }
+    .canvas-card { height:calc(100vh - 64px - 94px); border-radius:22px; }
+    .scene-top-tools { left:10px; right:66px; top:10px; }
+    .scene-top-tools button { padding:9px 10px; font-size:12px; }
+    .mode-switch { top:10px; right:10px; }
+    .mini-map,.walk-btn { display:none; }
+    .fh-pro-bottom-panel { position:fixed; left:10px; right:10px; bottom:86px; max-height:54vh; min-height:290px; overflow:auto; margin:0; border-radius:24px; padding:14px; z-index:45; box-shadow:0 -18px 70px rgba(40,50,42,.25); transform:translateY(calc(100% + 110px)); opacity:0; pointer-events:none; transition:transform .22s ease, opacity .22s ease; }
     .fh-pro-bottom-panel.open { transform:translateY(0); opacity:1; pointer-events:auto; }
-    .bottom-tabs { gap:22px; overflow:auto; padding-right:42px; }
-    .mobile-panel-close { display:grid !important; place-items:center; position:absolute; right:8px; top:11px; width:34px; height:34px; border-radius:12px; background:#172334 !important; color:#fff !important; font-size:22px !important; padding:0 !important; }
+    .bottom-tabs { overflow:auto; gap:20px; padding-right:42px; }
+    .mobile-panel-close { display:grid !important; place-items:center; position:absolute; right:10px; top:10px; width:34px; height:34px; border-radius:12px; background:#F0F4EF !important; color:#1F2A24 !important; font-size:22px !important; padding:0 !important; }
     .catalog-filter-bar { grid-template-columns:1fr; }
-    .chips-row { padding-bottom:10px; }
-    .product-strip { display:flex; overflow-x:auto; gap:12px; padding-bottom:12px; }
-    .pro-product-card { min-width:160px; }
-    .materials-layout { grid-template-columns:1fr; }
-    .room-dimension-grid { grid-template-columns:1fr; }
+    .materials-layout,.room-dimension-grid { grid-template-columns:1fr; }
     .material-strip { display:flex; overflow-x:auto; }
     .material-chip { min-width:105px; }
-    .mobile-pro-nav { position:fixed; left:0; right:0; bottom:0; height:80px; background:#081019; border-top:1px solid rgba(148,163,184,.16); display:grid; grid-template-columns:1fr 1fr 82px 1fr 1fr; align-items:center; padding:6px 10px max(6px, env(safe-area-inset-bottom)); z-index:50; }
-    .mobile-pro-nav button { border:0; background:transparent; color:#AEB9C8; display:flex; flex-direction:column; align-items:center; gap:4px; font-size:22px; font-weight:900; }
+    .view-tools { bottom:14px; }
+    .mobile-pro-nav { position:fixed; left:0; right:0; bottom:0; height:76px; background:rgba(255,255,255,.96); border-top:1px solid #E8E2D9; display:grid; grid-template-columns:1fr 1fr 76px 1fr 1fr; align-items:center; padding:6px 10px max(6px, env(safe-area-inset-bottom)); z-index:50; box-shadow:0 -10px 35px rgba(30,40,30,.08); }
+    .mobile-pro-nav button { border:0; background:transparent; color:#6B786D; display:flex; flex-direction:column; align-items:center; gap:4px; font-size:22px; font-weight:900; }
     .mobile-pro-nav button span { font-size:11px; }
-    .mobile-pro-nav button.active { color:#fff; }
-    .mobile-pro-nav .plus { width:64px; height:64px; border-radius:50%; justify-self:center; background:linear-gradient(135deg,#6D45D8,#8B5CF6); color:#fff; font-size:40px; box-shadow:0 0 0 6px rgba(139,92,246,.18); }
+    .mobile-pro-nav button.active { color:#2E9D51; }
+    .mobile-pro-nav .plus { width:62px; height:62px; border-radius:50%; justify-self:center; background:#2E9D51; color:#fff; font-size:38px; box-shadow:0 0 0 6px rgba(46,157,81,.14); }
   }
 
   @media (max-width: 430px) {
-    .fh-pro-brand-name { font-size:16px; letter-spacing:3px; }
-    .cart-btn { min-width:82px; font-size:13px; }
-    .canvas-card { min-height:310px; }
-    .canvas-card { height:calc(100vh - 64px - 92px); }
-    .fh-pro-bottom-panel { max-height:56vh; min-height:300px; }
-    .product-img-wrap { height:112px; }
+    .fh-pro-brand-name { font-size:20px; }
+    .cart-btn { min-width:58px; font-size:13px; }
+    .canvas-card { min-height:330px; }
     .pro-product-card { min-width:150px; }
   }
 `;
