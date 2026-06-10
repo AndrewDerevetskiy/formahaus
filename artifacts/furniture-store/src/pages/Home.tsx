@@ -461,7 +461,7 @@ function ProductCard({ product, onAdd }: { product: StoreProduct; onAdd: () => v
             Купити
           </button>
 
-          <Link href={`/designer?add=${product.designerType}`} style={{ textDecoration: "none" }}>
+          <Link href={`/designer?productId=${product.id}&type=${product.designerType || "product"}`} style={{ textDecoration: "none" }}>
             <button
               disabled={!product.has3DModel}
               style={{
