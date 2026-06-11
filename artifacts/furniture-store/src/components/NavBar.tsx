@@ -132,9 +132,9 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
           position: sticky;
           top: 0;
           z-index: 100;
-          background: rgba(17, 24, 39, 0.94);
+          background: rgba(255, 255, 255, 0.96);
           backdrop-filter: blur(18px);
-          border-bottom: 1px solid rgba(255,255,255,.08);
+          border-bottom: 1px solid #E8E2D9;
           box-sizing: border-box;
         }
 
@@ -156,7 +156,7 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
           display: flex;
           align-items: center;
           gap: 12px;
-          color: #fff;
+          color: #1F2A24;
           text-decoration: none;
           flex-shrink: 0;
         }
@@ -165,18 +165,18 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
           width: 46px;
           height: 46px;
           border-radius: 16px;
-          background: linear-gradient(135deg,#1D4ED8,#111827);
+          background: linear-gradient(135deg,#E8F6EC,#D7EEDC);
           display: grid;
           place-items: center;
-          color: #fff;
+          color: #1F2A24;
           font-size: 22px;
           font-weight: 950;
-          box-shadow: 0 12px 30px rgba(37,99,235,.22);
+          box-shadow: 0 12px 30px rgba(46,157,81,.16);
           flex-shrink: 0;
         }
 
         .fh-navbar-name {
-          color: #fff;
+          color: #1F2A24;
           font-size: 17px;
           font-weight: 950;
           letter-spacing: 4px;
@@ -184,7 +184,7 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
         }
 
         .fh-navbar-name span {
-          color: #60A5FA;
+          color: #2E9D51;
         }
 
         .fh-navbar-desktop {
@@ -199,7 +199,7 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
         .fh-nav-link {
           border: none;
           background: transparent;
-          color: #CBD5E1;
+          color: #5F6E63;
           border-radius: 12px;
           padding: 10px 12px;
           font-size: 14px;
@@ -209,9 +209,9 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
         }
 
         .fh-nav-link.active {
-          background: rgba(37,99,235,.14);
-          color: #93C5FD;
-          box-shadow: inset 0 -2px 0 #2563EB;
+          background: #E8F6EC;
+          color: #2E8B4E;
+          box-shadow: inset 0 -2px 0 #2E9D51;
         }
 
         .fh-navbar-actions {
@@ -223,9 +223,9 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
 
         .fh-cart-button {
           position: relative;
-          border: 1px solid rgba(255,255,255,.14);
-          background: rgba(255,255,255,.08);
-          color: #fff;
+          border: 1px solid #E8E2D9;
+          background: #FFFFFF;
+          color: #1F2A24;
           border-radius: 14px;
           padding: 11px 14px;
           min-height: 44px;
@@ -242,7 +242,7 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
           min-width: 20px;
           height: 20px;
           border-radius: 999px;
-          background: #2563EB;
+          background: #2E9D51;
           color: #fff;
           display: inline-grid;
           place-items: center;
@@ -253,7 +253,7 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
 
         .fh-login-button {
           border: none;
-          background: #2563EB;
+          background: #2E9D51;
           color: #fff;
           border-radius: 14px;
           padding: 12px 16px;
@@ -268,8 +268,8 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
           display: none;
           width: 44px;
           height: 44px;
-          border: 1px solid rgba(255,255,255,.14);
-          background: rgba(255,255,255,.08);
+          border: 1px solid #E8E2D9;
+          background: #FFFFFF;
           border-radius: 14px;
           padding: 10px;
           cursor: pointer;
@@ -279,7 +279,7 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
         .fh-burger span {
           display: block;
           height: 2px;
-          background: #fff;
+          background: #1F2A24;
           border-radius: 99px;
           margin: 5px 0;
         }
@@ -317,17 +317,17 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
             display: grid;
             gap: 8px;
             padding: 12px 14px 16px;
-            background: rgba(17,24,39,.98);
-            border-top: 1px solid rgba(255,255,255,.08);
+            background: rgba(255,255,255,.98);
+            border-top: 1px solid #E8E2D9;
           }
 
           .fh-mobile-link {
             width: 100%;
             min-height: 46px;
             text-align: left;
-            border: 1px solid rgba(255,255,255,.08);
-            background: rgba(255,255,255,.05);
-            color: #E5E7EB;
+            border: 1px solid #E8E2D9;
+            background: #FFFFFF;
+            color: #1F2A24;
             border-radius: 14px;
             padding: 12px 14px;
             font-size: 15px;
@@ -336,9 +336,9 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
           }
 
           .fh-mobile-link.active {
-            border-color: rgba(37,99,235,.5);
-            background: rgba(37,99,235,.18);
-            color: #93C5FD;
+            border-color: #D7EEDC;
+            background: #E8F6EC;
+            color: #2E8B4E;
           }
 
           .fh-mobile-link.danger {
@@ -347,7 +347,7 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
 
           .fh-mobile-separator {
             height: 1px;
-            background: rgba(255,255,255,.08);
+            background: #FFFFFF;
             margin: 4px 0;
           }
         }
@@ -398,6 +398,14 @@ export default function NavBar({ activePage = "" }: NavBarProps) {
             padding: 9px 10px;
           }
         }
+
+
+        /* FormaHaus unified light-green theme */
+        .fh-navbar-logo { color:#2E9D51 !important; }
+        .fh-login-button { background:#2E9D51 !important; color:#fff !important; }
+        .fh-cart-count { background:#2E9D51 !important; color:#fff !important; }
+        .fh-burger span { background:#1F2A24 !important; }
+        .fh-cart-button, .fh-burger { color:#1F2A24 !important; }
       `}</style>
     </header>
   );
