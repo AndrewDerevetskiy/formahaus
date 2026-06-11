@@ -830,32 +830,70 @@ const styles = `
   }
 
   @media (max-width: 820px) {
-    .fh-pro-topbar { height:64px; padding:0 12px; grid-template-columns: 1fr auto; gap:10px; }
-    .fh-pro-search,.fh-pro-mainnav,.profile-btn,.fh-pro-top-actions .icon-btn { display:none; }
-    .fh-pro-brand-name { font-size:22px; }
-    .fh-pro-workspace { height:calc(100vh - 64px - 76px); display:block; padding:10px; overflow:hidden; }
-    .fh-pro-rail { display:none; }
-    .fh-pro-stage { height:100%; display:block; }
-    .canvas-card { height:calc(100vh - 64px - 94px); border-radius:22px; }
-    .scene-top-tools { left:10px; right:66px; top:10px; }
-    .scene-top-tools button { padding:9px 10px; font-size:12px; }
-    .mode-switch { top:10px; right:10px; }
-    .mini-map,.walk-btn { display:none; }
-    .fh-pro-bottom-panel { position:fixed; left:10px; right:10px; bottom:86px; max-height:54vh; min-height:290px; overflow:auto; margin:0; border-radius:24px; padding:14px; z-index:45; box-shadow:0 -18px 70px rgba(40,50,42,.25); transform:translateY(calc(100% + 110px)); opacity:0; pointer-events:none; transition:transform .22s ease, opacity .22s ease; }
-    .fh-pro-bottom-panel.open { transform:translateY(0); opacity:1; pointer-events:auto; }
-    .bottom-tabs { overflow:auto; gap:20px; padding-right:42px; }
-    .mobile-panel-close { display:grid !important; place-items:center; position:absolute; right:10px; top:10px; width:34px; height:34px; border-radius:12px; background:#F0F4EF !important; color:#1F2A24 !important; font-size:22px !important; padding:0 !important; }
-    .catalog-filter-bar { grid-template-columns:1fr; }
-    .materials-layout,.room-dimension-grid { grid-template-columns:1fr; }
-    .material-strip { display:flex; overflow-x:auto; }
-    .material-chip { min-width:105px; }
-    .view-tools { bottom:14px; }
-    .mobile-pro-nav { position:fixed; left:0; right:0; bottom:0; height:76px; background:rgba(255,255,255,.96); border-top:1px solid #E8E2D9; display:grid; grid-template-columns:1fr 1fr 76px 1fr 1fr; align-items:center; padding:6px 10px max(6px, env(safe-area-inset-bottom)); z-index:50; box-shadow:0 -10px 35px rgba(30,40,30,.08); }
-    .mobile-pro-nav button { border:0; background:transparent; color:#6B786D; display:flex; flex-direction:column; align-items:center; gap:4px; font-size:22px; font-weight:900; }
-    .mobile-pro-nav button span { font-size:11px; }
-    .mobile-pro-nav button.active { color:#2E9D51; }
-    .mobile-pro-nav .plus { width:62px; height:62px; border-radius:50%; justify-self:center; background:#2E9D51; color:#fff; font-size:38px; box-shadow:0 0 0 6px rgba(46,157,81,.14); }
+  .fh-pro-topbar { height:64px; padding:0 12px; grid-template-columns: 1fr auto; gap:10px; }
+  .fh-pro-search,.fh-pro-mainnav,.profile-btn,.fh-pro-top-actions .icon-btn { display:none; }
+  .fh-pro-brand-name { font-size:22px; }
+
+  .fh-pro-workspace {
+    height: calc(100vh - 64px - 76px);
+    display: block;
+    padding: 8px;
+    overflow: hidden;
   }
+
+  .fh-pro-rail { display:none; }
+  .fh-pro-stage { height:100%; display:block; }
+
+  .canvas-card {
+    height: calc(100vh - 64px - 76px);
+    border-radius: 22px;
+  }
+
+  .scene-top-tools { left:10px; right:66px; top:10px; }
+  .scene-top-tools button { padding:9px 10px; font-size:12px; }
+  .mode-switch { top:10px; right:10px; }
+  .mini-map,.walk-btn { display:none; }
+
+  .fh-pro-bottom-panel {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 76px;
+    max-height: 38vh;
+    min-height: 180px;
+    overflow: auto;
+    margin: 0;
+    border-radius: 24px;
+    padding: 14px;
+    z-index: 45;
+    box-shadow: 0 -18px 70px rgba(40,50,42,.25);
+    transform: translateY(calc(100% + 110px));
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .22s ease, opacity .22s ease;
+  }
+
+  .fh-pro-bottom-panel.open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .bottom-tabs { overflow:auto; gap:20px; padding-right:42px; }
+  .mobile-panel-close { display:grid !important; place-items:center; position:absolute; right:10px; top:10px; width:34px; height:34px; border-radius:12px; background:#F0F4EF !important; color:#1F2A24 !important; font-size:22px !important; padding:0 !important; }
+
+  .catalog-filter-bar { grid-template-columns:1fr; }
+  .materials-layout,.room-dimension-grid { grid-template-columns:1fr; }
+  .material-strip { display:flex; overflow-x:auto; }
+  .material-chip { min-width:105px; }
+  .view-tools { bottom:14px; }
+
+  .mobile-pro-nav { position:fixed; left:0; right:0; bottom:0; height:76px; background:rgba(255,255,255,.96); border-top:1px solid #E8E2D9; display:grid; grid-template-columns:1fr 1fr 76px 1fr 1fr; align-items:center; padding:6px 10px max(6px, env(safe-area-inset-bottom)); z-index:50; box-shadow:0 -10px 35px rgba(30,40,30,.08); }
+  .mobile-pro-nav button { border:0; background:transparent; color:#6B786D; display:flex; flex-direction:column; align-items:center; gap:4px; font-size:22px; font-weight:900; }
+  .mobile-pro-nav button span { font-size:11px; }
+  .mobile-pro-nav button.active { color:#2E9D51; }
+  .mobile-pro-nav .plus { width:62px; height:62px; border-radius:50%; justify-self:center; background:#2E9D51; color:#fff; font-size:38px; box-shadow:0 0 0 6px rgba(46,157,81,.14); }
+}
 
   @media (max-width: 430px) {
     .fh-pro-brand-name { font-size:20px; }
