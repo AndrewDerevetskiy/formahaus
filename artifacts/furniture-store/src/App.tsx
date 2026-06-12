@@ -8,6 +8,7 @@ import ProductPage from "./pages/ProductPage";
 import VendorRegister from "./pages/VendorRegister";
 import VendorDashboard from "./pages/VendorDashboard";
 import VendorProfile from "./pages/VendorProfile";
+import VendorStorePage from "./pages/VendorStorePage";
 import FormaHaus from "./components/FormaHaus";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -27,12 +28,14 @@ export default function App() {
           <Route path="/category/:id" component={CategoryPage} />
           <Route path="/product/:id" component={ProductPage} />
           <Route path="/vendor/register" component={VendorRegister} />
-          <Route path="/vendor/store/:vendorId" component={VendorProfile} />
+          <Route path="/vendor/store/:vendorId" component={VendorStorePage} />
+
           <Route path="/vendor/dashboard">
             <ProtectedVendor>
               <VendorDashboard />
             </ProtectedVendor>
           </Route>
+
           <Route>
             <Home />
           </Route>
