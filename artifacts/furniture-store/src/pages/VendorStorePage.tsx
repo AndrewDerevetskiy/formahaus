@@ -45,32 +45,34 @@ export default function VendorStorePage() {
   const vendorName = products[0]?.vendor_name || "Магазин продавця";
 
   useEffect(() => {
-    async function loadStore() {
-      setLoading(true);
+  async function loadStore() {
+    setLoading(true);
 
-      const query = supabase
-        .from("products")
-        .select("*")
-        .eq("status", "active")
-        .order("created_at", { ascending: false });
+    let request = supabase
+      .from("products")
+      .select("*")
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
 
-      const { data, error } = vendorId === "demo_vendor"
-        ? await query
-        : await query.or(`vendor_id.eq.${vendorId},vendor_name.eq.${vendorId}`);
-
-      if (error) {
-        console.error(error);
-        alert("Не вдалося завантажити магазин продавця");
-        setProducts([]);
-      } else {
-        setProducts(data || []);
-      }
-
-      setLoading(false);
+    if (vendorId && vendorId !== "demo_vendor") {
+      request = request.eq("vendor_id", vendorId);
     }
 
-    loadStore();
-  }, [vendorId]);
+    const { data, error } = await request;
+
+    if (error) {
+      console.error("Vendor store error:", error);
+      alert(error.message);
+      setProducts([]);
+    } else {
+      setProducts(data || []);
+    }
+
+    setLoading(false);
+  }
+
+  loadStore();
+}, [vendorId]);
 
   const totalValue = useMemo(
     () => products.reduce((sum, p) => sum + Number(p.price || 0) * Number(p.stock || 0), 0),
