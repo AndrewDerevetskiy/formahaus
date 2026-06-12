@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import NavBar from "../components/NavBar";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
 
 type ProductStatus = "draft" | "active" | "paused";
 type OrderStatus = "new" | "confirmed" | "completed" | "cancelled";
@@ -142,12 +143,74 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+type SupabaseProductRow = {
+  id: string;
+  vendor_id?: string | null;
+  vendor_name?: string | null;
+  name?: string | null;
+  category?: string | null;
+  price?: number | string | null;
+  old_price?: number | string | null;
+  stock?: number | string | null;
+  description?: string | null;
+  image_url?: string | null;
+  model_3d_url?: string | null;
+  designer_type?: string | null;
+  has_3d_model?: boolean | null;
+  status?: ProductStatus | string | null;
+  created_at?: string | null;
+};
+
+function fromSupabaseProduct(row: SupabaseProductRow): VendorProduct {
+  return {
+    id: String(row.id),
+    vendorId: row.vendor_id || "demo_vendor",
+    vendorName: row.vendor_name || "FormaHaus",
+    name: row.name || "Без назви",
+    category: row.category || "Меблі",
+    price: Number(row.price || 0),
+    oldPrice: row.old_price === null || row.old_price === undefined ? undefined : Number(row.old_price),
+    stock: Number(row.stock || 0),
+    description: row.description || "Опис товару",
+    imageUrl: row.image_url || defaultImage(row.category || "Меблі"),
+    model3dUrl: row.model_3d_url || "",
+    designerType: row.designer_type || "",
+    has3DModel: Boolean(row.has_3d_model || row.designer_type || row.model_3d_url),
+    status: (row.status === "draft" || row.status === "paused" || row.status === "active") ? row.status : "active",
+    createdAt: row.created_at || new Date().toISOString(),
+  };
+}
+
+function toSupabaseProductPayload(product: Omit<VendorProduct, "id" | "createdAt"> & { id?: string }) {
+  return {
+    name: product.name,
+    description: product.description || "Опис товару",
+    price: product.price,
+    old_price: product.oldPrice ?? null,
+    stock: product.stock,
+    vendor_id: isUuid(product.vendorId) ? product.vendorId : null,
+    vendor_name: product.vendorName || "Мій магазин",
+    category: product.category || "Меблі",
+    image_url: product.imageUrl || defaultImage(product.category),
+    model_3d_url: product.model3dUrl || null,
+    designer_type: product.designerType || null,
+    has_3d_model: Boolean(product.has3DModel || product.designerType || product.model3dUrl),
+    status: product.status || "active",
+  };
+}
+
 export default function VendorDashboard() {
   const auth = useAuth();
 
   const [tab, setTab] = useState<"products" | "orders">("products");
-  const [products, setProducts] = useState<VendorProduct[]>(() => loadProducts());
+  const [products, setProducts] = useState<VendorProduct[]>([]);
   const [orders, setOrders] = useState<SavedOrder[]>(() => loadOrders());
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -170,7 +233,10 @@ export default function VendorDashboard() {
   const vendorId = auth.user?.id || "demo_vendor";
   const vendorName = auth.user?.vendorName || auth.user?.name || "Мій магазин";
 
-  const myProducts = useMemo(() => products.filter(p => p.vendorId === vendorId), [products, vendorId]);
+  const myProducts = useMemo(() => {
+    if (vendorId === "demo_vendor") return products;
+    return products.filter(p => p.vendorId === vendorId || p.vendorName === vendorName);
+  }, [products, vendorId, vendorName]);
 
   const stats = useMemo(() => {
     const active = myProducts.filter(p => p.status === "active").length;
@@ -181,7 +247,33 @@ export default function VendorDashboard() {
     return { totalProducts: myProducts.length, active, totalValue, newOrders, ordersTotal };
   }, [myProducts, orders]);
 
-  useEffect(() => saveProducts(products), [products]);
+  async function loadProductsFromSupabase() {
+    setIsLoadingProducts(true);
+
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Supabase products load error", error);
+      const localProducts = loadProducts();
+      setProducts(localProducts);
+      alert("Не вдалося завантажити товари з Supabase. Показую локальні товари. Перевір RLS policy для SELECT.");
+      setIsLoadingProducts(false);
+      return;
+    }
+
+    const mapped = (data || []).map(row => fromSupabaseProduct(row as SupabaseProductRow));
+    setProducts(mapped);
+    saveProducts(mapped);
+    setIsLoadingProducts(false);
+  }
+
+  useEffect(() => {
+    loadProductsFromSupabase();
+  }, []);
+
   useEffect(() => saveOrders(orders), [orders]);
 
   function update<K extends keyof ProductForm>(key: K, value: ProductForm[K]) {
@@ -295,9 +387,10 @@ export default function VendorDashboard() {
     setEditingId(null);
   }
 
-  function submitProduct(e: React.FormEvent) {
+  async function submitProduct(e: React.FormEvent) {
     e.preventDefault();
 
+    if (isSavingProduct) return;
     if (!form.name.trim()) return alert("Вкажіть назву товару");
     if (!form.price.trim()) return alert("Вкажіть ціну");
     if (!form.stock.trim()) return alert("Вкажіть залишок");
@@ -309,32 +402,10 @@ export default function VendorDashboard() {
     if (!Number.isFinite(price) || price <= 0) return alert("Ціна має бути більше 0");
     if (!Number.isFinite(stock) || stock < 0) return alert("Залишок не може бути менше 0");
 
-    if (editingId) {
-      setProducts(prev => prev.map(p => p.id === editingId ? {
-        ...p,
-        name: form.name,
-        category: form.category,
-        price,
-        oldPrice,
-        stock,
-        description: form.description,
-        imageUrl: form.imageUrl || defaultImage(form.category),
-        model3dUrl: form.model3dUrl,
-        designerType: form.designerType,
-        has3DModel: Boolean(form.designerType) || Boolean(form.model3dUrl) || form.has3DModel,
-      } : p));
-
-      alert("Товар оновлено");
-      resetForm();
-      setShowForm(false);
-      return;
-    }
-
-    const product: VendorProduct = {
-      id: `product_${Date.now()}`,
+    const draftProduct: Omit<VendorProduct, "id" | "createdAt"> = {
       vendorId,
       vendorName,
-      name: form.name,
+      name: form.name.trim(),
       category: form.category,
       price,
       oldPrice,
@@ -345,13 +416,48 @@ export default function VendorDashboard() {
       designerType: form.designerType,
       has3DModel: Boolean(form.designerType) || Boolean(form.model3dUrl) || form.has3DModel,
       status: "active",
-      createdAt: new Date().toISOString(),
     };
 
-    setProducts(prev => [product, ...prev]);
-    alert("Товар додано");
-    resetForm();
-    setShowForm(false);
+    setIsSavingProduct(true);
+
+    try {
+      if (editingId) {
+        const { data, error } = await supabase
+          .from("products")
+          .update(toSupabaseProductPayload(draftProduct))
+          .eq("id", editingId)
+          .select("*")
+          .single();
+
+        if (error) throw error;
+
+        const updatedProduct = fromSupabaseProduct(data as SupabaseProductRow);
+        setProducts(prev => prev.map(p => p.id === editingId ? updatedProduct : p));
+        alert("Товар оновлено в Supabase");
+        resetForm();
+        setShowForm(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("products")
+        .insert(toSupabaseProductPayload(draftProduct))
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      const createdProduct = fromSupabaseProduct(data as SupabaseProductRow);
+      setProducts(prev => [createdProduct, ...prev]);
+      alert("Товар додано в Supabase");
+      resetForm();
+      setShowForm(false);
+    } catch (error: any) {
+      console.error("Supabase product save error", error);
+      alert(`Supabase не дозволив зберегти товар: ${error?.message || "невідома помилка"}. Якщо це RLS, треба додати INSERT/UPDATE policy для products.`);
+    } finally {
+      setIsSavingProduct(false);
+    }
   }
 
   function editProduct(product: VendorProduct) {
@@ -373,13 +479,39 @@ export default function VendorDashboard() {
     });
   }
 
-  function deleteProduct(id: string) {
+  async function deleteProduct(id: string) {
     if (!confirm("Видалити товар?")) return;
+
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Supabase product delete error", error);
+      alert(`Не вдалося видалити товар: ${error.message}`);
+      return;
+    }
+
     setProducts(prev => prev.filter(p => p.id !== id));
   }
 
-  function changeStatus(id: string, status: ProductStatus) {
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+  async function changeStatus(id: string, status: ProductStatus) {
+    const { data, error } = await supabase
+      .from("products")
+      .update({ status })
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    if (error) {
+      console.error("Supabase product status error", error);
+      alert(`Не вдалося змінити статус: ${error.message}`);
+      return;
+    }
+
+    const updatedProduct = fromSupabaseProduct(data as SupabaseProductRow);
+    setProducts(prev => prev.map(p => p.id === id ? updatedProduct : p));
   }
 
   function changeOrderStatus(id: string, status: OrderStatus) {
@@ -594,7 +726,7 @@ export default function VendorDashboard() {
                     <span>Товар можна приміряти в 3D редакторі</span>
                   </label>
 
-                  <button type="submit" style={{ ...blueBtn, width: "100%", justifyContent: "center" }}>{editingId ? "Зберегти зміни" : "Додати товар"}</button>
+                  <button type="submit" style={{ ...blueBtn, width: "100%", justifyContent: "center" }}>{isSavingProduct ? "Збереження..." : editingId ? "Зберегти зміни" : "Додати товар"}</button>
                 </form>
               </section>
             )}
@@ -605,10 +737,15 @@ export default function VendorDashboard() {
                   <h2 style={sectionTitle}>Мої товари</h2>
                   <p style={sectionSubtitle}>Список товарів, які ви додали як продавець.</p>
                 </div>
-                <button onClick={() => { resetForm(); setShowForm(true); }} style={blueBtn}>+ Новий товар</button>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button onClick={loadProductsFromSupabase} style={greyBtn}>Оновити з Supabase</button>
+                  <button onClick={() => { resetForm(); setShowForm(true); }} style={blueBtn}>+ Новий товар</button>
+                </div>
               </div>
 
-              {myProducts.length === 0 ? (
+              {isLoadingProducts ? (
+                <div style={empty}>Завантажую товари з Supabase...</div>
+              ) : myProducts.length === 0 ? (
                 <div style={empty}>Товарів поки немає</div>
               ) : (
                 <div style={{ display: "grid", gap: 12 }}>
