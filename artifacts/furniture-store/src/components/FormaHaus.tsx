@@ -165,7 +165,7 @@ export default function FormaHaus() {
   const cart = useCart();
 
   const [tab, setTab] = useState<ДизайнerTab>("furniture");
-  const [mobilePanelOpen, setMobilePanelOpen] = useState(true);
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [items, setItems] = useState<PlacedItem[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [floorId, setFloorId] = useState("oak");
@@ -407,7 +407,7 @@ export default function FormaHaus() {
 
         <section className="fh-pro-stage">
           <div className="canvas-card">
-            <Canvas shadows dpr={[1, 1.7]} camera={{ position: [4.2, 3.1, 5.1], fov: 42 }}>
+            <Canvas shadows dpr={[1, 1.7]} camera={{ position: [4.8, 3.4, 5.8], fov: 40 }}>
               <Pro3DEffects />
               <Scene
                 items={items}
@@ -937,7 +937,7 @@ const styles = `
     .view-tools button { width: 36px; height: 34px; font-size: 15px; }
     .object-float-tools { top: 54%; gap: 6px; padding: 7px; }
     .object-float-tools button { width: 34px; height: 34px; }
-    .fh-pro-bottom-panel { left: 8px; right: 8px; bottom: 84px; max-height: 56vh; min-height: 300px; border-radius: 22px; padding: 12px; }
+    .fh-pro-bottom-panel { left: 8px; right: 8px; bottom: 84px; max-height: 40vh; min-height: 190px; border-radius: 22px; padding: 12px; }
     .bottom-tabs { gap: 18px; overflow-x:auto; padding-right: 44px; }
     .bottom-tabs button { font-size: 13px; white-space: nowrap; }
     .catalog-filter-bar { grid-template-columns: 1fr; }
@@ -955,7 +955,7 @@ const styles = `
   @media (max-width: 380px) {
     .fh-pro-brand-name { font-size: 17px; }
     .canvas-card { min-height: 315px; }
-    .fh-pro-bottom-panel { min-height: 280px; max-height: 58vh; }
+    .fh-pro-bottom-panel { min-height: 180px; max-height: 42vh; }
     .pro-product-card { min-width: 140px; }
     .product-img-wrap { height: 96px; }
     .scene-top-tools button { padding: 7px 8px; }
@@ -983,11 +983,11 @@ function Scene({
 }) {
   return (
     <>
-      <color attach="background" args={["#e9e3d9"]} />
-      <fog attach="fog" args={["#e9e3d9", 7, 18]} />
+      <color attach="background" args={["#f3f1ec"]} />
+      <fog attach="fog" args={["#f3f1ec", 8, 20]} />
 
       {/* PRO LIGHTING: тепле світло, тіні, акценти як у професійному planner */}
-      <ambientLight intensity={0.38} color="#fff3e4" />
+      <ambientLight intensity={0.46} color="#fff5ea" />
       <hemisphereLight intensity={0.45} color="#fff6e8" groundColor="#9b8064" />
 
       <directionalLight
@@ -1171,56 +1171,148 @@ function Room({ floor, wallColor, dimensions }: { floor: typeof FLOOR_OPTIONS[nu
   const halfLength = length / 2;
   const halfWidth = width / 2;
 
+  const wallMaterial = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.86, metalness: 0.01 }),
+    [wallColor]
+  );
+  const trimMaterial = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.56, metalness: 0.02 }),
+    []
+  );
+  const woodMaterial = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#b48a5f", roughness: 0.64, metalness: 0.02 }),
+    []
+  );
+  const darkMaterial = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#233027", roughness: 0.6, metalness: 0.08 }),
+    []
+  );
+  const glassMaterial = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#b9d8eb",
+        roughness: 0.08,
+        metalness: 0.02,
+        transparent: true,
+        opacity: 0.42,
+      }),
+    []
+  );
+
+  const windowW = Math.min(1.65, length * 0.3);
+  const windowH = Math.min(1.15, height * 0.42);
+  const windowX = Math.min(halfLength - windowW / 2 - 0.35, 0.85);
+  const windowY = height * 0.62;
+  const doorW = Math.min(0.92, width * 0.28);
+  const doorH = Math.min(2.05, height - 0.24);
+
   return (
     <group>
+      {/* Floor */}
       <mesh rotation-x={-Math.PI / 2} receiveShadow>
         <planeGeometry args={[length, width]} />
-        <meshStandardMaterial map={floorTexture} roughness={0.58} metalness={0.03} />
+        <meshStandardMaterial map={floorTexture} roughness={0.5} metalness={0.025} />
       </mesh>
 
+      {/* Subtle floor border/shadow under walls */}
+      <Box args={[length, 0.025, 0.05]} pos={[0, 0.018, -halfWidth + 0.025]} mat={trimMaterial} />
+      <Box args={[length, 0.025, 0.05]} pos={[0, 0.018, halfWidth - 0.025]} mat={trimMaterial} />
+      <Box args={[width, 0.025, 0.05]} pos={[-halfLength + 0.025, 0.018, 0]} mat={trimMaterial} rot={[0, Math.PI / 2, 0]} />
+      <Box args={[width, 0.025, 0.05]} pos={[halfLength - 0.025, 0.018, 0]} mat={trimMaterial} rot={[0, Math.PI / 2, 0]} />
+
+      {/* Walls */}
       <mesh position={[0, height / 2, -halfWidth]} receiveShadow>
         <planeGeometry args={[length, height]} />
-        <meshStandardMaterial color={wallColor} roughness={0.9} />
+        <primitive object={wallMaterial} attach="material" />
       </mesh>
 
       <mesh position={[-halfLength, height / 2, 0]} rotation-y={Math.PI / 2} receiveShadow>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial color={wallColor} roughness={0.9} />
+        <primitive object={wallMaterial} attach="material" />
       </mesh>
 
       <mesh position={[halfLength, height / 2, 0]} rotation-y={-Math.PI / 2} receiveShadow>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial color={wallColor} roughness={0.9} />
+        <primitive object={wallMaterial} attach="material" />
       </mesh>
 
+      {/* Ceiling */}
       <mesh position={[0, height, 0]} rotation-x={Math.PI / 2} receiveShadow>
         <planeGeometry args={[length, width]} />
-        <meshStandardMaterial color="#f7f4ed" roughness={0.86} transparent opacity={0.82} side={THREE.DoubleSide} />
+        <meshStandardMaterial color="#fbfaf6" roughness={0.78} side={THREE.DoubleSide} />
       </mesh>
 
-      <mesh position={[0, 0.04, -halfWidth + 0.03]}>
-        <boxGeometry args={[length, 0.08, 0.06]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.65} />
+      {/* Baseboards */}
+      <Box args={[length, 0.11, 0.075]} pos={[0, 0.07, -halfWidth + 0.035]} mat={trimMaterial} />
+      <Box args={[length, 0.11, 0.075]} pos={[0, 0.07, halfWidth - 0.035]} mat={trimMaterial} />
+      <Box args={[width, 0.11, 0.075]} pos={[-halfLength + 0.035, 0.07, 0]} mat={trimMaterial} rot={[0, Math.PI / 2, 0]} />
+      <Box args={[width, 0.11, 0.075]} pos={[halfLength - 0.035, 0.07, 0]} mat={trimMaterial} rot={[0, Math.PI / 2, 0]} />
+
+      {/* Crown molding */}
+      <Box args={[length, 0.055, 0.055]} pos={[0, height - 0.055, -halfWidth + 0.025]} mat={trimMaterial} />
+      <Box args={[width, 0.055, 0.055]} pos={[-halfLength + 0.025, height - 0.055, 0]} mat={trimMaterial} rot={[0, Math.PI / 2, 0]} />
+      <Box args={[width, 0.055, 0.055]} pos={[halfLength - 0.025, height - 0.055, 0]} mat={trimMaterial} rot={[0, Math.PI / 2, 0]} />
+
+      {/* Large window on back wall */}
+      <group position={[windowX, windowY, -halfWidth - 0.018]}>
+        <Box args={[windowW + 0.18, windowH + 0.18, 0.06]} pos={[0, 0, 0]} mat={trimMaterial} />
+        <mesh position={[0, 0, -0.034]}>
+          <planeGeometry args={[windowW, windowH]} />
+          <primitive object={glassMaterial} attach="material" />
+        </mesh>
+        <Box args={[0.045, windowH + 0.15, 0.07]} pos={[0, 0, -0.065]} mat={trimMaterial} />
+        <Box args={[windowW + 0.13, 0.045, 0.07]} pos={[0, 0, -0.066]} mat={trimMaterial} />
+        <Box args={[windowW + 0.34, 0.08, 0.18]} pos={[0, -windowH / 2 - 0.17, 0.06]} mat={trimMaterial} />
+        <Box args={[0.08, windowH + 0.36, 0.08]} pos={[-windowW / 2 - 0.13, 0, -0.02]} mat={trimMaterial} />
+        <Box args={[0.08, windowH + 0.36, 0.08]} pos={[windowW / 2 + 0.13, 0, -0.02]} mat={trimMaterial} />
+      </group>
+
+      {/* Sunlight patch under the window */}
+      <mesh rotation-x={-Math.PI / 2} position={[windowX - 0.1, 0.018, -halfWidth + 0.86]} receiveShadow>
+        <planeGeometry args={[Math.min(2.15, length * 0.35), 1.15]} />
+        <meshBasicMaterial color="#fff3d8" transparent opacity={0.22} depthWrite={false} />
       </mesh>
 
-      <mesh position={[-halfLength + 0.03, 0.04, 0]} rotation-y={Math.PI / 2}>
-        <boxGeometry args={[width, 0.08, 0.06]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.65} />
-      </mesh>
+      {/* Door on right wall */}
+      <group position={[halfLength + 0.018, doorH / 2, Math.max(-halfWidth + doorW / 2 + 0.2, -0.75)]} rotation-y={-Math.PI / 2}>
+        <Box args={[doorW + 0.16, doorH + 0.16, 0.08]} pos={[0, 0, 0]} mat={trimMaterial} />
+        <Box args={[doorW, doorH, 0.055]} pos={[0, -0.04, -0.035]} mat={woodMaterial} />
+        <Box args={[doorW - 0.18, doorH * 0.36, 0.035]} pos={[0, doorH * 0.18, -0.07]} mat={new THREE.MeshStandardMaterial({ color: "#c69c72", roughness: 0.72 })} />
+        <mesh position={[doorW * 0.32, 0.02, -0.095]} castShadow>
+          <sphereGeometry args={[0.045, 20, 20]} />
+          <meshStandardMaterial color="#d5b46c" roughness={0.32} metalness={0.7} />
+        </mesh>
+      </group>
 
-      <mesh position={[halfLength - 0.03, 0.04, 0]} rotation-y={Math.PI / 2}>
-        <boxGeometry args={[width, 0.08, 0.06]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.65} />
-      </mesh>
+      {/* Simple wall art for premium empty-room feel */}
+      <group position={[-halfLength - 0.018, height * 0.58, -0.35]} rotation-y={Math.PI / 2}>
+        <Box args={[0.78, 0.58, 0.055]} pos={[0, 0, 0]} mat={trimMaterial} />
+        <mesh position={[0, 0, -0.035]}>
+          <planeGeometry args={[0.64, 0.44]} />
+          <meshStandardMaterial color="#d8c8b6" roughness={0.82} />
+        </mesh>
+        <mesh position={[0.08, 0.02, -0.055]}>
+          <circleGeometry args={[0.14, 40]} />
+          <meshStandardMaterial color="#8fa889" roughness={0.74} />
+        </mesh>
+      </group>
 
-      <mesh position={[Math.min(0.8, halfLength - 0.9), height * 0.62, -halfWidth - 0.018]}>
-        <boxGeometry args={[Math.min(1.45, length * 0.28), Math.min(1.05, height * 0.38), 0.05]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.3} />
-      </mesh>
+      {/* Track light and ceiling spots */}
+      <Box args={[1.55, 0.035, 0.055]} pos={[0, height - 0.09, -0.25]} mat={darkMaterial} />
+      {[-0.55, 0, 0.55].map((x) => (
+        <group key={x} position={[x, height - 0.18, -0.25]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.065, 0.065, 0.13, 24]} />
+            <primitive object={darkMaterial} attach="material" />
+          </mesh>
+          <pointLight position={[0, -0.05, 0]} intensity={0.34} color="#fff1d8" distance={3.2} />
+        </group>
+      ))}
 
-      <mesh position={[Math.min(0.8, halfLength - 0.9), height * 0.62, -halfWidth - 0.042]}>
-        <planeGeometry args={[Math.min(1.25, length * 0.24), Math.min(0.86, height * 0.31)]} />
-        <meshStandardMaterial color="#bcd9ee" roughness={0.16} metalness={0.05} transparent opacity={0.52} />
+      {/* A subtle rug plane: makes the empty room less cold, but products still remain primary */}
+      <mesh rotation-x={-Math.PI / 2} position={[0.15, 0.021, 0.55]} receiveShadow>
+        <planeGeometry args={[Math.min(2.8, length * 0.46), Math.min(1.65, width * 0.42)]} />
+        <meshStandardMaterial color="#d7cbb8" roughness={0.94} transparent opacity={0.52} />
       </mesh>
     </group>
   );
@@ -1443,9 +1535,9 @@ function КаталогModel({ type, selected }: { type: string; selected: boole
   return <Box args={[0.7, 0.7, 0.7]} pos={[0, 0.35, 0]} mat={fabric} />;
 }
 
-function Box({ args, pos, mat }: { args: [number, number, number]; pos: [number, number, number]; mat: THREE.Material }) {
+function Box({ args, pos, mat, rot }: { args: [number, number, number]; pos: [number, number, number]; mat: THREE.Material; rot?: [number, number, number] }) {
   return (
-    <mesh position={pos} castShadow receiveShadow material={mat}>
+    <mesh position={pos} rotation={rot} castShadow receiveShadow material={mat}>
       <boxGeometry args={args} />
     </mesh>
   );
