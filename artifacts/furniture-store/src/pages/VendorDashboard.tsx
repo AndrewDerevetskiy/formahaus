@@ -13,6 +13,7 @@ type VendorProduct = {
   vendorName: string;
   name: string;
   category: string;
+  categoryId?: string;
   price: number;
   oldPrice?: number;
   stock: number;
@@ -64,6 +65,7 @@ type SavedOrder = {
 type ProductForm = {
   name: string;
   category: string;
+  categoryId: string;
   price: string;
   oldPrice: string;
   stock: string;
@@ -79,7 +81,12 @@ type ProductForm = {
 const LS_VENDOR_PRODUCTS = "formahaus_vendor_products";
 const LS_ORDERS = "formahaus_orders";
 
-const categories = ["Меблі", "Підлога", "Ламінат", "Плитка", "Освітлення", "Стіни та обої", "Фарба", "Декор"];
+type Category = {
+  id: string;
+  name: string;
+};
+
+const FALLBACK_CATEGORIES = ["Меблі", "Підлога", "Ламінат", "Плитка", "Освітлення", "Стіни та обої", "Фарба", "Декор"];
 
 const designerTypes = [
   { value: "", label: "Без 3D" },
@@ -153,6 +160,7 @@ type SupabaseProductRow = {
   vendor_name?: string | null;
   name?: string | null;
   category?: string | null;
+  category_id?: string | null;
   price?: number | string | null;
   old_price?: number | string | null;
   stock?: number | string | null;
@@ -172,6 +180,7 @@ function fromSupabaseProduct(row: SupabaseProductRow): VendorProduct {
     vendorName: row.vendor_name || "FormaHaus",
     name: row.name || "Без назви",
     category: row.category || "Меблі",
+    categoryId: row.category_id || "",
     price: Number(row.price || 0),
     oldPrice: row.old_price === null || row.old_price === undefined ? undefined : Number(row.old_price),
     stock: Number(row.stock || 0),
@@ -195,6 +204,7 @@ function toSupabaseProductPayload(product: Omit<VendorProduct, "id" | "createdAt
     vendor_id: isUuid(product.vendorId) ? product.vendorId : null,
     vendor_name: product.vendorName || "Мій магазин",
     category: product.category || "Меблі",
+    category_id: product.categoryId && isUuid(product.categoryId) ? product.categoryId : null,
     image_url: product.imageUrl || defaultImage(product.category),
     model_3d_url: product.model3dUrl || null,
     designer_type: product.designerType || null,
@@ -209,6 +219,7 @@ export default function VendorDashboard() {
   const [tab, setTab] = useState<"products" | "orders">("products");
   const [products, setProducts] = useState<VendorProduct[]>([]);
   const [orders, setOrders] = useState<SavedOrder[]>(() => loadOrders());
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
 
@@ -218,6 +229,7 @@ export default function VendorDashboard() {
   const [form, setForm] = useState<ProductForm>({
     name: "",
     category: "Меблі",
+    categoryId: "",
     price: "",
     oldPrice: "",
     stock: "",
@@ -270,8 +282,28 @@ export default function VendorDashboard() {
     setIsLoadingProducts(false);
   }
 
+  async function loadCategoriesFromSupabase() {
+    const { data, error } = await supabase
+      .from("categories")
+      .select("id,name")
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Supabase categories load error", error);
+      setCategories(FALLBACK_CATEGORIES.map((name, index) => ({ id: `fallback_${index}`, name })));
+      return;
+    }
+
+    const mapped = (data || [])
+      .filter((row: any) => row?.id && row?.name)
+      .map((row: any) => ({ id: String(row.id), name: String(row.name) }));
+
+    setCategories(mapped.length ? mapped : FALLBACK_CATEGORIES.map((name, index) => ({ id: `fallback_${index}`, name })));
+  }
+
   useEffect(() => {
     loadProductsFromSupabase();
+    loadCategoriesFromSupabase();
   }, []);
 
   useEffect(() => saveOrders(orders), [orders]);
@@ -373,6 +405,7 @@ export default function VendorDashboard() {
     setForm({
       name: "",
       category: "Меблі",
+      categoryId: "",
       price: "",
       oldPrice: "",
       stock: "",
@@ -407,6 +440,7 @@ export default function VendorDashboard() {
       vendorName,
       name: form.name.trim(),
       category: form.category,
+      categoryId: form.categoryId,
       price,
       oldPrice,
       stock,
@@ -466,6 +500,7 @@ export default function VendorDashboard() {
     setForm({
       name: product.name,
       category: product.category,
+      categoryId: product.categoryId || "",
       price: String(product.price),
       oldPrice: product.oldPrice ? String(product.oldPrice) : "",
       stock: String(product.stock),
@@ -585,8 +620,25 @@ export default function VendorDashboard() {
                       <input value={form.name} onChange={e => update("name", e.target.value)} placeholder="Наприклад: Ламінат світлий дуб" style={input} />
                     </Field>
                     <Field label="Категорія">
-                      <select value={form.category} onChange={e => update("category", e.target.value)} style={input}>
-                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                      <select
+                        value={form.categoryId || categories.find(c => c.name === form.category)?.id || form.category}
+                        onChange={e => {
+                          const value = e.target.value;
+                          const selectedCategory = categories.find(c => c.id === value);
+
+                          if (selectedCategory) {
+                            update("categoryId", selectedCategory.id);
+                            update("category", selectedCategory.name);
+                          } else {
+                            update("categoryId", "");
+                            update("category", value);
+                          }
+                        }}
+                        style={input}
+                      >
+                        {(categories.length ? categories : FALLBACK_CATEGORIES.map((name, index) => ({ id: name, name }))).map(category => (
+                          <option key={category.id} value={category.id}>{category.name}</option>
+                        ))}
                       </select>
                     </Field>
                     <Field label="Ціна">
