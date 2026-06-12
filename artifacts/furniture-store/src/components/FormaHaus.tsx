@@ -113,16 +113,33 @@ function loadVendorProducts(): VendorProduct[] {
   }
 }
 
+function designerTypeByCategory(category: string) {
+  const value = String(category || "").toLowerCase();
+
+  if (value.includes("освіт") || value.includes("ламп") || value.includes("люстр")) return "floorlamp";
+  if (value.includes("підлог") || value.includes("ламінат") || value.includes("плит")) return "floor_product";
+  if (value.includes("стін") || value.includes("обої") || value.includes("фарб")) return "wall_product";
+  if (value.includes("декор") || value.includes("рослин")) return "plant";
+  if (value.includes("шаф") || value.includes("комод")) return "cabinet";
+  if (value.includes("крісл")) return "armchair";
+  if (value.includes("стіл")) return "coffee";
+
+  return "sofa";
+}
+
 function normalizeVendorProduct(product: VendorProduct): КаталогItem {
+  const category = product.category || "Товари продавців";
+
   return {
     id: `vendor_${product.id}`,
-    type: product.designerType || product.category || "product",
+    type: product.designerType || designerTypeByCategory(category),
     name: product.name,
-    category: product.category || "Товари продавців",
+    category,
     price: Number(product.price || 0),
     description: product.description || `Товар продавця ${product.vendorName || ""}`,
     imageUrl: product.imageUrl,
     model3dUrl: product.model3dUrl,
+    sellerName: product.vendorName || "Продавець FormaHaus",
   };
 }
 
@@ -138,7 +155,7 @@ function readVendorProducts(): КаталогItem[] {
 
     return list.map((product: any, index: number) => ({
       id: String(product.id || `vendor_${index}`),
-      type: String(product.designerType || product.type || "sofa"),
+      type: String(product.designerType || product.type || designerTypeByCategory(product.category || "Меблі")),
       name: String(product.name || "Товар продавця"),
       category: String(product.category || "Меблі"),
       price: Number(product.price || 0),
@@ -176,7 +193,7 @@ export default function FormaHaus() {
   const [priceFilter, setPriceFilter] = useState("all");
   const [vendorProducts3D, setVendorProducts3D] = useState<КаталогItem[]>(() =>
     loadVendorProducts()
-      .filter(product => product.status === "active" && (product.has3DModel || product.designerType || product.model3dUrl))
+      .filter(product => product.status === "active")
       .map(normalizeVendorProduct)
   );
 
@@ -185,12 +202,11 @@ export default function FormaHaus() {
     setMobilePanelOpen(true);
   }
 
-  const vendorProducts = useMemo(() => readVendorProducts(), []);
-  const catalog = useMemo(() => [...vendorProducts, ...FURNITURE], [vendorProducts]);
+  const catalog = useMemo(() => [...vendorProducts3D, ...FURNITURE], [vendorProducts3D]);
 
   function refreshVendorProducts3D() {
     const products = loadVendorProducts()
-      .filter(product => product.status === "active" && (product.has3DModel || product.designerType || product.model3dUrl))
+      .filter(product => product.status === "active")
       .map(normalizeVendorProduct);
 
     setVendorProducts3D(products);
@@ -625,6 +641,7 @@ function ProductCard({ item, onAdd }: { item: КаталогItem; onAdd: () => v
         <button className="heart">♡</button>
       </div>
       <div className="pro-product-name">{item.name}</div>
+      {item.sellerName && <div className="seller-name">{item.sellerName}</div>}
       <div className="pro-product-price">{money(item.price)}</div>
       <button className="add-product-btn" onClick={onAdd}>+ Додати</button>
     </article>
@@ -772,6 +789,7 @@ const styles = `
   .badge-3d { position:absolute; left:8px; top:8px; background:#E8F6EC; color:#2E8B4E; font-size:11px; font-weight:950; padding:4px 7px; border-radius:8px; }
   .heart { position:absolute; right:8px; top:8px; width:28px; height:28px; border:0; border-radius:9px; background:rgba(255,255,255,.84); color:#64756A; font-size:18px; }
   .pro-product-name { color:#1F2A24; font-size:13px; font-weight:900; margin-top:9px; min-height:34px; }
+  .seller-name { color:#6B786D; font-size:11px; font-weight:850; margin:-2px 0 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .pro-product-price { color:#1F2A24; font-weight:950; margin:5px 0 8px; }
   .add-product-btn { width:100%; border:0; border-radius:11px; height:34px; background:#2E9D51; color:white; font-weight:950; cursor:pointer; }
   .product-placeholder { width:100%; height:100%; display:grid; place-items:center; color:#1F2A24; font-weight:950; }
