@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { Canvas, ThreeEvent, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, OrbitControls, useGLTF } from "@react-three/drei";
 import { useCart } from "../context/CartContext";
+import { supabase } from "../lib/supabase";
 
 type ДизайнerTab = "furniture" | "materials" | "summary" | "ai";
 
@@ -20,24 +21,6 @@ type КаталогItem = {
   sellerName?: string;
 };
 
-type VendorProduct = {
-  id: string;
-  vendorId: string;
-  vendorName: string;
-  name: string;
-  category: string;
-  price: number;
-  oldPrice?: number;
-  stock: number;
-  description: string;
-  imageUrl: string;
-  model3dUrl?: string;
-  designerType: string;
-  has3DModel: boolean;
-  status: "draft" | "active" | "paused";
-  createdAt: string;
-};
-
 type PlacedItem = КаталогItem & {
   instanceId: string;
   position: [number, number, number];
@@ -50,34 +33,6 @@ type RoomDimensions = {
   width: number;
   height: number;
 };
-
-const LS_VENDOR_PRODUCTS = "formahaus_vendor_products";
-
-const FURNITURE: КаталогItem[] = [
-  { id: "sofa", type: "sofa", name: "Скандинавський диван", category: "Меблі", price: 2199, description: "3-місний диван, льон", imageUrl: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=700&q=80", sellerName: "FormaHaus" },
-  { id: "corner_sofa", type: "sofa", name: "Кутовий диван Oslo", category: "Меблі", price: 2899, description: "Кутовий диван для вітальні", imageUrl: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=700&q=80", sellerName: "WoodArt" },
-  { id: "armchair", type: "armchair", name: "Крісло Lounge", category: "Меблі", price: 1049, description: "М'яке крісло для вітальні", imageUrl: "https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=700&q=80", sellerName: "WoodArt" },
-  { id: "dining_chair", type: "armchair", name: "Обідній стілець Cozy", category: "Меблі", price: 249, description: "Стілець для кухні або їдальні", imageUrl: "https://images.unsplash.com/photo-1519947486511-46149fa0a254?auto=format&fit=crop&w=700&q=80", sellerName: "MebelPro" },
-  { id: "coffee", type: "coffee", name: "Журнальний стіл Wood", category: "Меблі", price: 849, description: "Стіл для вітальні", imageUrl: "https://images.unsplash.com/photo-1533090481720-856c6e3c1fdc?auto=format&fit=crop&w=700&q=80", sellerName: "FormaHaus" },
-  { id: "dining", type: "dining", name: "Обідній стіл Oak", category: "Меблі", price: 1999, description: "Стіл на 6–8 місць", imageUrl: "https://images.unsplash.com/photo-1615066390971-03e4e1c36ddf?auto=format&fit=crop&w=700&q=80", sellerName: "WoodArt" },
-  { id: "bookshelf", type: "bookshelf", name: "Стелаж Walnut", category: "Меблі", price: 699, description: "Відкритий стелаж", imageUrl: "https://images.unsplash.com/photo-1594620302200-9a762244a156?auto=format&fit=crop&w=700&q=80", sellerName: "HomeLine" },
-  { id: "cabinet", type: "cabinet", name: "Комод Minimal", category: "Меблі", price: 1349, description: "Комод / тумба", imageUrl: "https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=700&q=80", sellerName: "HomeLine" },
-  { id: "wardrobe", type: "cabinet", name: "Шафа Soft White", category: "Меблі", price: 1599, description: "Шафа для спальні", imageUrl: "https://images.unsplash.com/photo-1618220179428-22790b461013?auto=format&fit=crop&w=700&q=80", sellerName: "FormaHaus" },
-  { id: "tv_unit", type: "cabinet", name: "Тумба під TV", category: "Меблі", price: 899, description: "Тумба для телевізора", imageUrl: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?auto=format&fit=crop&w=700&q=80", sellerName: "WoodArt" },
-  { id: "floorlamp", type: "floorlamp", name: "Підлогова лампа", category: "Освітлення", price: 599, description: "Торшер для вітальні", imageUrl: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=700&q=80", sellerName: "LightHub" },
-  { id: "table_lamp", type: "floorlamp", name: "Настільна лампа", category: "Освітлення", price: 189, description: "Лампа для робочого столу", imageUrl: "https://images.unsplash.com/photo-1543198126-a8ad8e47fb22?auto=format&fit=crop&w=700&q=80", sellerName: "LightHub" },
-  { id: "pendant", type: "floorlamp", name: "Підвісний світильник", category: "Освітлення", price: 389, description: "Світильник над столом", imageUrl: "https://images.unsplash.com/photo-1606170034764-bcaf3c32bf7d?auto=format&fit=crop&w=700&q=80", sellerName: "LightHub" },
-  { id: "wall_light", type: "floorlamp", name: "Настінне бра", category: "Освітлення", price: 229, description: "Декоративне настінне світло", imageUrl: "https://images.unsplash.com/photo-1567016432779-094069958ea5?auto=format&fit=crop&w=700&q=80", sellerName: "LightHub" },
-  { id: "plant", type: "plant", name: "Кімнатна рослина", category: "Декор", price: 149, description: "Декоративна рослина", imageUrl: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=700&q=80", sellerName: "GreenHome" },
-  { id: "large_plant", type: "plant", name: "Велика рослина", category: "Декор", price: 249, description: "Акцентна рослина", imageUrl: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=700&q=80", sellerName: "GreenHome" },
-  { id: "rug_classic", type: "rug_classic", name: "Килим Area Rug", category: "Декор", price: 599, description: "Килим для вітальні", imageUrl: "https://images.unsplash.com/photo-1575414003591-ece8d0416c7a?auto=format&fit=crop&w=700&q=80", sellerName: "TextileHome" },
-  { id: "round_rug", type: "rug_classic", name: "Круглий килим", category: "Декор", price: 499, description: "Круглий килим", imageUrl: "https://images.unsplash.com/photo-1618220048045-10a6dbdf83e0?auto=format&fit=crop&w=700&q=80", sellerName: "TextileHome" },
-  { id: "mirror", type: "cabinet", name: "Настінне дзеркало", category: "Декор", price: 299, description: "Дзеркало для кімнати", imageUrl: "https://images.unsplash.com/photo-1618220179428-22790b461013?auto=format&fit=crop&w=700&q=80", sellerName: "FormaHaus" },
-  { id: "laminate_oak", type: "floor_product", name: "Ламінат світлий дуб", category: "Підлога", price: 45, description: "Ціна за м², 32 клас", imageUrl: "https://images.unsplash.com/photo-1516455590571-18256e5bb9ff?auto=format&fit=crop&w=700&q=80", sellerName: "FloorMarket" },
-  { id: "tile_stone", type: "floor_product", name: "Керамограніт Stone Grey", category: "Підлога", price: 72, description: "Ціна за м², плитка", imageUrl: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=700&q=80", sellerName: "FloorMarket" },
-  { id: "paint_white", type: "wall_product", name: "Фарба Warm White", category: "Стіни та обої", price: 28, description: "Ціна за м² покриття", imageUrl: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=700&q=80", sellerName: "ColorSpace" },
-  { id: "wallpaper_linen", type: "wall_product", name: "Шпалери Linen Beige", category: "Стіни та обої", price: 39, description: "Ціна за рулон", imageUrl: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=700&q=80", sellerName: "ColorSpace" },
-];
 
 const FLOOR_OPTIONS = [
   { id: "oak", name: "Світлий дуб", color: "#d8bc8d", color2: "#b98242", pattern: "planks", price: 3645 },
@@ -104,15 +59,6 @@ function money(value: number) {
   return `${Number(value || 0).toLocaleString("uk-UA")} ₴`;
 }
 
-function loadVendorProducts(): VendorProduct[] {
-  try {
-    const raw = localStorage.getItem(LS_VENDOR_PRODUCTS);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
 function designerTypeByCategory(category: string) {
   const value = String(category || "").toLowerCase();
 
@@ -127,46 +73,33 @@ function designerTypeByCategory(category: string) {
   return "sofa";
 }
 
-function normalizeVendorProduct(product: VendorProduct): КаталогItem {
-  const category = product.category || "Товари продавців";
+type SupabaseProductRow = {
+  id: string;
+  name?: string | null;
+  category?: string | null;
+  price?: number | string | null;
+  description?: string | null;
+  image_url?: string | null;
+  model_3d_url?: string | null;
+  designer_type?: string | null;
+  vendor_name?: string | null;
+  status?: string | null;
+};
+
+function normalizeSupabaseProduct(product: SupabaseProductRow): КаталогItem {
+  const category = String(product.category || "Каталог");
 
   return {
-    id: `vendor_${product.id}`,
-    type: product.designerType || designerTypeByCategory(category),
-    name: product.name,
+    id: String(product.id),
+    type: String(product.designer_type || designerTypeByCategory(category)),
+    name: String(product.name || "Товар"),
     category,
     price: Number(product.price || 0),
-    description: product.description || `Товар продавця ${product.vendorName || ""}`,
-    imageUrl: product.imageUrl,
-    model3dUrl: product.model3dUrl,
-    sellerName: product.vendorName || "Продавець FormaHaus",
+    description: String(product.description || "Товар FormaHaus"),
+    imageUrl: product.image_url || "",
+    model3dUrl: product.model_3d_url || "",
+    sellerName: product.vendor_name || "Продавець FormaHaus",
   };
-}
-
-function readVendorProducts(): КаталогItem[] {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const raw = localStorage.getItem(LS_VENDOR_PRODUCTS);
-    if (!raw) return [];
-
-    const list = JSON.parse(raw);
-    if (!Array.isArray(list)) return [];
-
-    return list.map((product: any, index: number) => ({
-      id: String(product.id || `vendor_${index}`),
-      type: String(product.designerType || product.type || designerTypeByCategory(product.category || "Меблі")),
-      name: String(product.name || "Товар продавця"),
-      category: String(product.category || "Меблі"),
-      price: Number(product.price || 0),
-      description: String(product.description || "Товар продавця FormaHaus"),
-      imageUrl: product.imageUrl || product.photoUrl || product.image || "",
-      model3dUrl: product.model3dUrl || product.modelUrl || product.model_path || "",
-      sellerName: product.vendorName || product.sellerName || "Продавець FormaHaus",
-    }));
-  } catch {
-    return [];
-  }
 }
 
 const categoryLabel: Record<string, string> = {
@@ -191,39 +124,42 @@ export default function FormaHaus() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [priceFilter, setPriceFilter] = useState("all");
-  const [vendorProducts3D, setVendorProducts3D] = useState<КаталогItem[]>(() =>
-    loadVendorProducts()
-      .filter(product => product.status === "active")
-      .map(normalizeVendorProduct)
-  );
+  const [vendorProducts3D, setVendorProducts3D] = useState<КаталогItem[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
 
   function openTab(nextTab: ДизайнerTab) {
     setTab(nextTab);
     setMobilePanelOpen(true);
   }
 
-  const catalog = useMemo(() => [...vendorProducts3D, ...FURNITURE], [vendorProducts3D]);
+  const catalog = useMemo(() => vendorProducts3D, [vendorProducts3D]);
 
-  function refreshVendorProducts3D() {
-    const products = loadVendorProducts()
-      .filter(product => product.status === "active")
-      .map(normalizeVendorProduct);
+  async function refreshVendorProducts3D() {
+    setCatalogLoading(true);
 
-    setVendorProducts3D(products);
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("FormaHaus products load error", error);
+      setVendorProducts3D([]);
+      setCatalogLoading(false);
+      return;
+    }
+
+    setVendorProducts3D((data || []).map(row => normalizeSupabaseProduct(row as SupabaseProductRow)));
+    setCatalogLoading(false);
   }
 
   useEffect(() => {
     refreshVendorProducts3D();
 
-    function onStorage() {
-      refreshVendorProducts3D();
-    }
-
-    window.addEventListener("storage", onStorage);
     window.addEventListener("focus", refreshVendorProducts3D);
 
     return () => {
-      window.removeEventListener("storage", onStorage);
       window.removeEventListener("focus", refreshVendorProducts3D);
     };
   }, []);
@@ -511,9 +447,15 @@ export default function FormaHaus() {
 
                 <div className="section-line"><b>{categoryFilter === "All" ? "Меблі" : categoryLabel[categoryFilter] || categoryFilter}</b><span>Показати всі ›</span></div>
                 <div className="product-strip">
-                  {filteredКаталог.map(item => (
-                    <ProductCard key={item.id} item={item} onAdd={() => addКаталог(item)} />
-                  ))}
+                  {catalogLoading ? (
+                    <div className="catalog-empty-state">Завантажую товари з Supabase...</div>
+                  ) : filteredКаталог.length === 0 ? (
+                    <div className="catalog-empty-state">У Supabase немає активних товарів для цього фільтра</div>
+                  ) : (
+                    filteredКаталог.map(item => (
+                      <ProductCard key={item.id} item={item} onAdd={() => addКаталог(item)} />
+                    ))
+                  )}
                 </div>
               </>
             )}
@@ -783,6 +725,7 @@ const styles = `
   .section-line b { font-size:16px; }
   .section-line span { color:#2E9D51; font-size:13px; font-weight:850; }
   .product-strip { display:flex; gap:12px; overflow:auto; padding-bottom:8px; }
+  .catalog-empty-state { min-width:260px; border:1px dashed #D7EEDC; background:#F8FCF8; color:#64756A; border-radius:16px; padding:18px; font-size:13px; font-weight:900; }
   .pro-product-card { background:#fff; border:1px solid #E8E2D9; border-radius:16px; padding:9px; min-width:148px; box-shadow:0 8px 20px rgba(35,55,42,.05); }
   .product-img-wrap { height:112px; border-radius:13px; overflow:hidden; position:relative; background:#F1EEE8; }
   .product-img-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
