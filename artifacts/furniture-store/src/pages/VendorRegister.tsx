@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { API_BASE } from "../lib/api";
 import NavBar from "../components/NavBar";
+import { useAuth } from "../context/AuthContext";
 
 export default function VendorRegister() {
   const [, navigate] = useLocation();
+  const auth = useAuth();
   const [form, setForm] = useState({ shop_name: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,18 +14,19 @@ export default function VendorRegister() {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
-      const res = await fetch(`${API_BASE}/api/vendor/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+      await auth.register({
+        name: form.shop_name.trim(),
+        vendorName: form.shop_name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        role: "vendor",
       });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || "Помилка реєстрації"); return; }
-      localStorage.setItem("vendor", JSON.stringify(data.vendor));
+
       navigate("/vendor/dashboard");
-    } catch {
-      setError("Помилка з'єднання з сервером");
+    } catch (err: any) {
+      setError(err?.message || "Помилка реєстрації продавця");
     } finally {
       setLoading(false);
     }
@@ -37,7 +39,7 @@ export default function VendorRegister() {
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 32 }}>
         <div style={{ width: "100%", maxWidth: 440 }}>
           <h1 style={{ fontSize: 28, fontWeight: 900, color: "#111", margin: "0 0 8px" }}>Реєстрація продавця</h1>
-          <p style={{ color: "#888", fontSize: 14, margin: "0 0 32px" }}>Створіть магазин і додавайте свої товари</p>
+          <p style={{ color: "#888", fontSize: 14, margin: "0 0 32px" }}>Створіть реальний магазин у Supabase і додавайте товари</p>
 
           {error && (
             <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "12px 16px", color: "#DC2626", fontSize: 14, marginBottom: 20 }}>{error}</div>
@@ -51,9 +53,10 @@ export default function VendorRegister() {
                 onChange={e => setForm(f => ({ ...f, shop_name: e.target.value }))}
                 placeholder="Мій меблевий магазин"
                 required
-                style={{ width: "100%", height: 44, border: "1.5px solid #E5E5E5", borderRadius: 10, padding: "0 14px", fontSize: 15, outline: "none", boxSizing: "border-box" }}
+                style={input}
               />
             </div>
+
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, color: "#444", display: "block", marginBottom: 6 }}>Email</label>
               <input
@@ -62,9 +65,10 @@ export default function VendorRegister() {
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="you@example.com"
                 required
-                style={{ width: "100%", height: 44, border: "1.5px solid #E5E5E5", borderRadius: 10, padding: "0 14px", fontSize: 15, outline: "none", boxSizing: "border-box" }}
+                style={input}
               />
             </div>
+
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, color: "#444", display: "block", marginBottom: 6 }}>Пароль</label>
               <input
@@ -74,24 +78,36 @@ export default function VendorRegister() {
                 placeholder="Мінімум 8 символів"
                 minLength={8}
                 required
-                style={{ width: "100%", height: 44, border: "1.5px solid #E5E5E5", borderRadius: 10, padding: "0 14px", fontSize: 15, outline: "none", boxSizing: "border-box" }}
+                style={input}
               />
             </div>
+
             <button
               type="submit"
               disabled={loading}
-              style={{ height: 48, borderRadius: 10, background: "#2563EB", color: "#fff", border: "none", fontSize: 15, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, marginTop: 8 }}
+              style={{ height: 48, borderRadius: 10, background: "#2E9D51", color: "#fff", border: "none", fontSize: 15, fontWeight: 800, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, marginTop: 8 }}
             >
-              {loading ? "Реєстрація..." : "Зареєструватися"}
+              {loading ? "Створення магазину..." : "Зареєструвати магазин"}
             </button>
           </form>
 
           <p style={{ marginTop: 24, fontSize: 14, color: "#888", textAlign: "center" }}>
             Вже маєте акаунт?{" "}
-            <Link href="/vendor/login"><span style={{ color: "#2563EB", fontWeight: 600, cursor: "pointer" }}>Увійти</span></Link>
+            <Link href="/login"><span style={{ color: "#2E9D51", fontWeight: 700, cursor: "pointer" }}>Увійти</span></Link>
           </p>
         </div>
       </div>
     </div>
   );
 }
+
+const input: React.CSSProperties = {
+  width: "100%",
+  height: 44,
+  border: "1.5px solid #E5E5E5",
+  borderRadius: 10,
+  padding: "0 14px",
+  fontSize: 15,
+  outline: "none",
+  boxSizing: "border-box",
+};
