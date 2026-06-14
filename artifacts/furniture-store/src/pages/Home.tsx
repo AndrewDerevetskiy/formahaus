@@ -4,26 +4,9 @@ import NavBar from "../components/NavBar";
 import { getProducts, type NormalizedProduct } from "../lib/formahausApi";
 import { useCart } from "../context/CartContext";
 
-type VendorProduct = {
-  id: string;
-  vendorId: string;
-  vendorName: string;
-  name: string;
-  category: string;
-  price: number;
-  oldPrice?: number;
-  stock: number;
-  description: string;
-  imageUrl: string;
-  designerType: string;
-  has3DModel: boolean;
-  status: "draft" | "active" | "paused";
-  createdAt: string;
-};
-
 type StoreProduct = {
   id: string;
-  source: "api" | "vendor_local";
+  source: "api";
   name: string;
   category: string;
   price: number;
@@ -38,7 +21,6 @@ type StoreProduct = {
   reviewsCount: number;
 };
 
-const LS_VENDOR_PRODUCTS = "formahaus_vendor_products";
 
 const C = {
   bg: "#F7FAF7",
@@ -60,15 +42,6 @@ function money(value: number) {
   return `${Number(value || 0).toLocaleString("uk-UA")} грн`;
 }
 
-function loadVendorProducts(): VendorProduct[] {
-  try {
-    const raw = localStorage.getItem(LS_VENDOR_PRODUCTS);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
 function normalizeApiProduct(p: NormalizedProduct): StoreProduct {
   return {
     id: p.id,
@@ -84,25 +57,6 @@ function normalizeApiProduct(p: NormalizedProduct): StoreProduct {
     vendorName: p.vendorName || "FormaHaus",
     rating: p.rating || 4.8,
     reviewsCount: p.reviewsCount || 0,
-  };
-}
-
-function normalizeVendorProduct(p: VendorProduct): StoreProduct {
-  return {
-    id: p.id,
-    source: "vendor_local",
-    name: p.name,
-    category: p.category,
-    price: Number(p.price || 0),
-    oldPrice: p.oldPrice,
-    stock: Number(p.stock || 0),
-    description: p.description,
-    imageUrl: p.imageUrl,
-    designerType: p.designerType,
-    has3DModel: p.has3DModel,
-    vendorName: p.vendorName || "Продавець",
-    rating: 5,
-    reviewsCount: 0,
   };
 }
 
@@ -122,21 +76,12 @@ const quickCategories = [
 export default function Home() {
   const cart = useCart();
 
-  const [apiProducts, setApiProducts] = useState<StoreProduct[]>([]);
-  const [vendorProducts, setVendorProducts] = useState<StoreProduct[]>([]);
+  const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [only3d, setOnly3d] = useState(false);
   const [sort, setSort] = useState("new");
-
-  function refreshVendorProducts() {
-    const localProducts = loadVendorProducts()
-      .filter((p) => p.status === "active")
-      .map(normalizeVendorProduct);
-
-    setVendorProducts(localProducts);
-  }
 
   useEffect(() => {
     let alive = true;
@@ -146,38 +91,23 @@ export default function Home() {
         setLoading(true);
         const data = await getProducts();
         if (!alive) return;
-        setApiProducts(data.map(normalizeApiProduct));
+        setProducts(data.map(normalizeApiProduct));
       } catch (err) {
         console.error(err);
-        if (alive) setApiProducts([]);
+        if (alive) setProducts([]);
       } finally {
         if (alive) setLoading(false);
       }
     }
 
     load();
-    refreshVendorProducts();
-
-    function onStorage() {
-      refreshVendorProducts();
-    }
-
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("focus", refreshVendorProducts);
 
     return () => {
       alive = false;
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("focus", refreshVendorProducts);
     };
   }, []);
 
-  const allProducts = useMemo(() => {
-    const map = new Map<string, StoreProduct>();
-    for (const p of apiProducts) map.set(`api_${p.id}`, p);
-    for (const p of vendorProducts) map.set(`vendor_${p.id}`, p);
-    return Array.from(map.values());
-  }, [apiProducts, vendorProducts]);
+  const allProducts = products;
 
   const categories = useMemo(() => {
     const list = Array.from(new Set(allProducts.map((p) => p.category).filter(Boolean)));
@@ -202,11 +132,7 @@ export default function Home() {
     if (sort === "price_low") list = [...list].sort((a, b) => a.price - b.price);
     if (sort === "price_high") list = [...list].sort((a, b) => b.price - a.price);
     if (sort === "stock") list = [...list].sort((a, b) => b.stock - a.stock);
-    if (sort === "new") {
-      list = [...list].sort(
-        (a, b) => Number(b.source === "vendor_local") - Number(a.source === "vendor_local")
-      );
-    }
+    if (sort === "new") list = [...list];
 
     return list;
   }, [allProducts, query, category, only3d, sort]);
@@ -402,7 +328,6 @@ function ProductCard({ product, onAdd }: { product: StoreProduct; onAdd: () => v
       <Link href={`/product/${product.id}`} className="fh-product-img-pro">
         <img src={product.imageUrl} alt={product.name} />
         <div className="fh-card-badges">
-          {product.source === "vendor_local" && <span>Новинка</span>}
           {product.has3DModel && <span className="green">3D</span>}
         </div>
         <small>{product.stock > 0 ? `В наявності: ${product.stock}` : "Немає"}</small>
