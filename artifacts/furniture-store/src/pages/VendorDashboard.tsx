@@ -176,7 +176,7 @@ type SupabaseProductRow = {
 function fromSupabaseProduct(row: SupabaseProductRow): VendorProduct {
   return {
     id: String(row.id),
-    vendorId: row.vendor_id || "demo_vendor",
+    vendorId: row.vendor_id || "",
     vendorName: row.vendor_name || "FormaHaus",
     name: row.name || "Без назви",
     category: row.category || "Меблі",
@@ -242,13 +242,13 @@ export default function VendorDashboard() {
     has3DModel: false,
   });
 
-  const vendorId = auth.user?.id || "demo_vendor";
+  const vendorId = auth.user?.id || "";
   const vendorName = auth.user?.vendorName || auth.user?.name || "Мій магазин";
 
   const myProducts = useMemo(() => {
-    if (vendorId === "demo_vendor") return products;
-    return products.filter(p => p.vendorId === vendorId || p.vendorName === vendorName);
-  }, [products, vendorId, vendorName]);
+    if (!vendorId) return [];
+    return products.filter(p => p.vendorId === vendorId);
+  }, [products, vendorId]);
 
   const stats = useMemo(() => {
     const active = myProducts.filter(p => p.status === "active").length;
@@ -262,23 +262,28 @@ export default function VendorDashboard() {
   async function loadProductsFromSupabase() {
     setIsLoadingProducts(true);
 
+    if (!vendorId || !isUuid(vendorId)) {
+      setProducts([]);
+      setIsLoadingProducts(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("products")
       .select("*")
+      .eq("vendor_id", vendorId)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Supabase products load error", error);
-      const localProducts = loadProducts();
-      setProducts(localProducts);
-      alert("Не вдалося завантажити товари з Supabase. Показую локальні товари. Перевір RLS policy для SELECT.");
+      setProducts([]);
+      alert(`Не вдалося завантажити товари з Supabase: ${error.message}`);
       setIsLoadingProducts(false);
       return;
     }
 
     const mapped = (data || []).map(row => fromSupabaseProduct(row as SupabaseProductRow));
     setProducts(mapped);
-    saveProducts(mapped);
     setIsLoadingProducts(false);
   }
 
@@ -304,7 +309,7 @@ export default function VendorDashboard() {
   useEffect(() => {
     loadProductsFromSupabase();
     loadCategoriesFromSupabase();
-  }, []);
+  }, [vendorId]);
 
   useEffect(() => saveOrders(orders), [orders]);
 
@@ -398,7 +403,7 @@ export default function VendorDashboard() {
       ai3dStatus: "done",
     }));
 
-    alert("AI 3D модель створена в тестовому режимі. Пізніше підключимо реальний AI-сервіс.");
+    alert("AI 3D модель додана як демо GLB. Для ринку підключимо реальний GLB-файл товару.");
   }
 
   function resetForm() {
